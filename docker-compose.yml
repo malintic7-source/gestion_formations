@@ -1,0 +1,24 @@
+services:
+  gestion_formations:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: gestion_formations_app:latest
+    container_name: gestion_formations_app
+    ports:
+      - "8080:80"
+    restart: always
+  api:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    image: gestion_formations_api:latest
+    container_name: gestion_formations_api
+    volumes:
+      - inscriptions_data:/data
+    expose:
+      - "5001"
+    restart: always
+
+volumes:
+  inscriptions_data:
