@@ -403,11 +403,12 @@ class _AdminUsersState extends State<AdminUsers> with TickerProviderStateMixin {
                   if (value == 'modifier') {
                     _showEditUserDialog(context, user);
                   } else if (value == 'toggle') {
+                    final localContext = context;
                     AuthProvider()
                         .setUserActive(user.id, !user.estActif)
                         .then((_) {
-                      if (!mounted) return;
-                      ScaffoldMessenger.of(context).showSnackBar(
+                      if (!localContext.mounted) return;
+                      ScaffoldMessenger.of(localContext).showSnackBar(
                         SnackBar(
                           content: Text(user.estActif
                               ? 'Utilisateur désactivé'
@@ -491,8 +492,6 @@ class _AdminUsersState extends State<AdminUsers> with TickerProviderStateMixin {
         return Icons.school_rounded;
       case UserRole.etudiant:
         return Icons.person_rounded;
-      default:
-        return Icons.person_rounded;
     }
   }
 
@@ -504,8 +503,6 @@ class _AdminUsersState extends State<AdminUsers> with TickerProviderStateMixin {
         return [AppTheme.primary, AppTheme.primaryDark];
       case UserRole.etudiant:
         return [Color(0xFFEF4444), Color(0xFFEF4444)];
-      default:
-        return [AppTheme.primary, AppTheme.primaryDark];
     }
   }
 
@@ -613,10 +610,11 @@ class _AdminUsersState extends State<AdminUsers> with TickerProviderStateMixin {
                 color: Colors.transparent,
                 child: InkWell(
                   onTap: () async {
+                    final localContext = context;
                     if (prenomController.text.isEmpty ||
                         nomController.text.isEmpty ||
                         emailController.text.isEmpty) {
-                      ScaffoldMessenger.of(context).showSnackBar(
+                      ScaffoldMessenger.of(localContext).showSnackBar(
                         SnackBar(content: Text('Veuillez remplir tous les champs')),
                       );
                       return;
@@ -631,17 +629,17 @@ class _AdminUsersState extends State<AdminUsers> with TickerProviderStateMixin {
                         role: selectedUserRole,
                       );
 
-                      if (!mounted) return;
-                      Navigator.pop(context);
-                      ScaffoldMessenger.of(context).showSnackBar(
+                      if (!localContext.mounted) return;
+                      Navigator.pop(localContext);
+                      ScaffoldMessenger.of(localContext).showSnackBar(
                         SnackBar(
                           content: Text('Utilisateur créé avec succès'),
                           backgroundColor: AppTheme.primary,
                         ),
                       );
                     } catch (e) {
-                      if (!mounted) return;
-                      ScaffoldMessenger.of(context).showSnackBar(
+                      if (!localContext.mounted) return;
+                      ScaffoldMessenger.of(localContext).showSnackBar(
                         SnackBar(
                           content: Text('Erreur: ${e.toString()}'),
                           backgroundColor: Color(0xFFEF4444),
@@ -750,9 +748,10 @@ class _AdminUsersState extends State<AdminUsers> with TickerProviderStateMixin {
                 color: Colors.transparent,
                 child: InkWell(
                   onTap: () async {
+                    final localContext = context;
                     if (prenomController.text.isEmpty ||
                         nomController.text.isEmpty) {
-                      ScaffoldMessenger.of(context).showSnackBar(
+                      ScaffoldMessenger.of(localContext).showSnackBar(
                         SnackBar(content: Text('Veuillez remplir tous les champs')),
                       );
                       return;
@@ -773,17 +772,17 @@ class _AdminUsersState extends State<AdminUsers> with TickerProviderStateMixin {
 
                       await AuthProvider().updateUser(updatedUser);
 
-                      if (!mounted) return;
-                      Navigator.pop(context);
-                      ScaffoldMessenger.of(context).showSnackBar(
+                      if (!localContext.mounted) return;
+                      Navigator.pop(localContext);
+                      ScaffoldMessenger.of(localContext).showSnackBar(
                         SnackBar(
                           content: Text('Utilisateur modifié avec succès'),
                           backgroundColor: Color(0xFFEF4444),
                         ),
                       );
                     } catch (e) {
-                      if (!mounted) return;
-                      ScaffoldMessenger.of(context).showSnackBar(
+                      if (!localContext.mounted) return;
+                      ScaffoldMessenger.of(localContext).showSnackBar(
                         SnackBar(
                           content: Text('Erreur: ${e.toString()}'),
                           backgroundColor: Color(0xFFEF4444),

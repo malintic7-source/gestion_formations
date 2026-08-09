@@ -861,10 +861,11 @@ class _AdminFormationsState extends State<AdminFormations>
               color: Colors.transparent,
               child: InkWell(
                 onTap: () async {
+                  final localContext = context;
                   final bytes = await _captureQrPng(qrKey);
                   if (bytes == null) {
-                    if (!mounted) return;
-                    ScaffoldMessenger.of(context).showSnackBar(
+                    if (!localContext.mounted) return;
+                    ScaffoldMessenger.of(localContext).showSnackBar(
                       SnackBar(content: Text('Impossible de générer le QR.')),
                     );
                     return;
@@ -897,7 +898,7 @@ $url
 👇 Scannez le QR code ci-dessous pour accéder directement!
                   ''';
 
-                  if (!mounted) return;
+                  if (!localContext.mounted) return;
                   Share.shareXFiles([XFile(file.path)], text: shareText);
                 },
                 borderRadius: BorderRadius.circular(8),
@@ -1107,6 +1108,7 @@ $url
                               onTap: isUploading
                                   ? null
                                   : () async {
+                                      final localContext = context;
                                       setState(() {
                                         isUploading = true;
                                       });
@@ -1115,6 +1117,7 @@ $url
                                             ImageKitService();
                                         final url = await imageKitService
                                             .pickAndUploadImage();
+                                        if (!mounted) return;
                                         if (url != null) {
                                           setState(() {
                                             uploadedImageUrl = url;
@@ -1122,9 +1125,9 @@ $url
                                           });
                                         }
                                       } catch (e) {
-                                        if (!mounted) return;
+                                        if (!localContext.mounted) return;
                                         ScaffoldMessenger.of(
-                                          context,
+                                          localContext,
                                         ).showSnackBar(
                                           SnackBar(
                                             content: Text(
@@ -1134,9 +1137,11 @@ $url
                                           ),
                                         );
                                       } finally {
-                                        setState(() {
-                                          isUploading = false;
-                                        });
+                                        if (mounted) {
+                                          setState(() {
+                                            isUploading = false;
+                                          });
+                                        }
                                       }
                                     },
                               child: Container(
@@ -1445,19 +1450,20 @@ $url
                         maxModulesParEtudiant: maxModulesParEtudiant,
                       );
 
+                      final localContext = context;
                       try {
                         await _db.addFormation(newFormation);
-                        if (!mounted) return;
-                        Navigator.pop(context);
-                        ScaffoldMessenger.of(context).showSnackBar(
+                        if (!localContext.mounted) return;
+                        Navigator.pop(localContext);
+                        ScaffoldMessenger.of(localContext).showSnackBar(
                           SnackBar(
                             content: Text('Formation créée avec succès'),
                             backgroundColor: AppTheme.primary,
                           ),
                         );
                       } catch (e) {
-                        if (!mounted) return;
-                        ScaffoldMessenger.of(context).showSnackBar(
+                        if (!localContext.mounted) return;
+                        ScaffoldMessenger.of(localContext).showSnackBar(
                           SnackBar(
                             content: Text('Erreur: ${e.toString()}'),
                             backgroundColor: Color(0xFFEF4444),
@@ -1686,6 +1692,7 @@ $url
                               onTap: isUploading
                                   ? null
                                   : () async {
+                                    final localContext = context;
                                       setState(() {
                                         isUploading = true;
                                       });
@@ -1701,9 +1708,9 @@ $url
                                           });
                                         }
                                       } catch (e) {
-                                        if (!mounted) return;
+                                        if (!localContext.mounted) return;
                                         ScaffoldMessenger.of(
-                                          context,
+                                          localContext,
                                         ).showSnackBar(
                                           SnackBar(
                                             content: Text(
@@ -2026,19 +2033,20 @@ $url
                         maxModulesParEtudiant: maxModulesParEtudiant,
                       );
 
+                      final localContext = context;
                       try {
                         await _db.updateFormation(updatedFormation);
-                        if (!mounted) return;
-                        Navigator.pop(context);
-                        ScaffoldMessenger.of(context).showSnackBar(
+                        if (!localContext.mounted) return;
+                        Navigator.pop(localContext);
+                        ScaffoldMessenger.of(localContext).showSnackBar(
                           SnackBar(
                             content: Text('Formation mise à jour'),
                             backgroundColor: Color(0xFFEF4444),
                           ),
                         );
                       } catch (e) {
-                        if (!mounted) return;
-                        ScaffoldMessenger.of(context).showSnackBar(
+                        if (!localContext.mounted) return;
+                        ScaffoldMessenger.of(localContext).showSnackBar(
                           SnackBar(
                             content: Text('Erreur: ${e.toString()}'),
                             backgroundColor: Color(0xFFEF4444),
@@ -2075,8 +2083,9 @@ $url
     BuildContext context,
     Formation formation,
   ) async {
+    final localContext = context;
     final confirmed = await showDialog<bool>(
-      context: context,
+      context: localContext,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Text(
@@ -2128,16 +2137,16 @@ $url
 
     try {
       await _db.deleteFormation(formation.id);
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
+      if (!localContext.mounted) return;
+      ScaffoldMessenger.of(localContext).showSnackBar(
         SnackBar(
           content: Text('Formation supprimée'),
           backgroundColor: Color(0xFFEF4444),
         ),
       );
     } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
+      if (!localContext.mounted) return;
+      ScaffoldMessenger.of(localContext).showSnackBar(
         SnackBar(
           content: Text('Erreur: ${e.toString()}'),
           backgroundColor: Color(0xFFEF4444),

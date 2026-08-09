@@ -332,6 +332,32 @@ class LocalDataService {
     }
   }
 
+  Future<void> updateInscriptionPaymentStatus(String inscriptionId, bool paiementEffectue) async {
+    final index = _inscriptions.indexWhere((i) => i.id == inscriptionId);
+    if (index == -1) return;
+
+    final old = _inscriptions[index];
+    _inscriptions[index] = Inscription(
+      id: old.id,
+      etudiantId: old.etudiantId,
+      formationId: old.formationId,
+      status: old.status,
+      dateInscription: old.dateInscription,
+      paiementId: old.paiementId,
+      paiementEffectue: paiementEffectue,
+      dateAcceptation: old.dateAcceptation,
+      motifRejet: old.motifRejet,
+      prenom: old.prenom,
+      nom: old.nom,
+      email: old.email,
+      telephone: old.telephone,
+      description: old.description,
+      modules: old.modules,
+      typeFormation: old.typeFormation,
+    );
+    _inscriptionsController.add(List.unmodifiable(_inscriptions));
+  }
+
   // --- PAYMENTS ---
   Stream<List<Payment>> watchPayments() async* {
     yield List.unmodifiable(_payments);
@@ -343,6 +369,44 @@ class LocalDataService {
   Future<void> addPayment(Payment payment) async {
     _payments.add(payment);
     _paymentsController.add(List.unmodifiable(_payments));
+  }
+
+  Future<void> updatePaymentStatus(String id, String statusStr) async {
+    final index = _payments.indexWhere((p) => p.id == id);
+    if (index == -1) return;
+
+    final old = _payments[index];
+
+    PaymentStatus newStatus = old.status;
+    if (statusStr == 'valide' || statusStr == 'effectue' || statusStr == 'effectué' || statusStr == 'effectue') {
+      newStatus = PaymentStatus.effectue;
+    } else if (statusStr == 'incomplet' || statusStr == 'echoue' || statusStr == 'échoué') {
+      newStatus = PaymentStatus.echoue;
+    } else if (statusStr == 'en_attente' || statusStr == 'enAttente' || statusStr == 'en_attente') {
+      newStatus = PaymentStatus.enAttente;
+    }
+
+    final updated = Payment(
+      id: old.id,
+      inscriptionId: old.inscriptionId,
+      etudiantId: old.etudiantId,
+      formationId: old.formationId,
+      montant: old.montant,
+      status: newStatus,
+      methode: old.methode,
+      dateCreation: old.dateCreation,
+      dateEffectuation: newStatus == PaymentStatus.effectue ? DateTime.now() : old.dateEffectuation,
+      referenceTransaction: old.referenceTransaction ?? 'REF-${DateTime.now().millisecondsSinceEpoch}',
+      motifEchec: old.motifEchec,
+      motif: old.motif,
+    );
+
+    _payments[index] = updated;
+    _paymentsController.add(List.unmodifiable(_payments));
+
+    if (updated.inscriptionId.isNotEmpty) {
+      await updateInscriptionPaymentStatus(updated.inscriptionId, updated.status == PaymentStatus.effectue);
+    }
   }
 
   // --- NOTIFICATIONS ---

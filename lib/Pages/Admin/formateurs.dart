@@ -484,14 +484,15 @@ class _AdminFormateursState extends State<AdminFormateurs> with TickerProviderSt
 
   Future<void> _toggleBlockUser(String userId, bool block) async {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(block ? 'Formateur bloqué' : 'Formateur débloqué')));
+    final localContext = context;
+    ScaffoldMessenger.of(localContext).showSnackBar(SnackBar(content: Text(block ? 'Formateur bloqué' : 'Formateur désactivé')));
   }
 
   Future<void> _assignFormationDialog(String userId) async {
-    final formations = _db.getFormations();
     if (!mounted) return;
+    final dialogContext = context;
     await showDialog(
-      context: context,
+      context: dialogContext,
       builder: (context) => AlertDialog(
         title: Text('Attribuer une formation', style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w700)),
         content: Text('Attribuer la formation sélectionnée à ce formateur ?'),
@@ -500,7 +501,7 @@ class _AdminFormateursState extends State<AdminFormateurs> with TickerProviderSt
           ElevatedButton(
             onPressed: () {
               Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('✅ Formation attribuée')));
+              ScaffoldMessenger.of(dialogContext).showSnackBar(SnackBar(content: Text('✅ Formation attribuée')));
             },
             child: Text('Attribuer'),
           ),
@@ -596,10 +597,11 @@ class _AdminFormateursState extends State<AdminFormateurs> with TickerProviderSt
                 color: Colors.transparent,
                 child: InkWell(
                   onTap: () async {
+                    final localContext = context;
                     if (prenomController.text.isEmpty ||
                         nomController.text.isEmpty ||
                         emailController.text.isEmpty) {
-                      ScaffoldMessenger.of(context).showSnackBar(
+                      ScaffoldMessenger.of(localContext).showSnackBar(
                         SnackBar(content: Text('Veuillez remplir tous les champs')),
                       );
                       return;
@@ -614,17 +616,17 @@ class _AdminFormateursState extends State<AdminFormateurs> with TickerProviderSt
                         role: UserRole.formateur,
                       );
 
-                      if (!mounted) return;
-                      Navigator.pop(context);
-                      ScaffoldMessenger.of(context).showSnackBar(
+                      if (!localContext.mounted) return;
+                      Navigator.pop(localContext);
+                      ScaffoldMessenger.of(localContext).showSnackBar(
                         SnackBar(
                           content: Text('Formateur créé avec succès'),
                           backgroundColor: AppTheme.primary,
                         ),
                       );
                     } catch (e) {
-                      if (!mounted) return;
-                      ScaffoldMessenger.of(context).showSnackBar(
+                      if (!localContext.mounted) return;
+                      ScaffoldMessenger.of(localContext).showSnackBar(
                         SnackBar(
                           content: Text('Erreur: ${e.toString()}'),
                           backgroundColor: Color(0xFFEF4444),
@@ -1025,7 +1027,6 @@ class _AdminFormateursState extends State<AdminFormateurs> with TickerProviderSt
   }
 
   Future<void> _scheduleDialog(String userId, Map<String, dynamic> data) async {
-    final user = _db.getUserById(userId);
     final userAssigned = <Map<String, dynamic>>[];
 
     if (userAssigned.isEmpty) {
@@ -1233,32 +1234,6 @@ class _AdminFormateursState extends State<AdminFormateurs> with TickerProviderSt
                   child: InkWell(
                     onTap: () async {
                       if (selectedFormation == null || selectedDays.isEmpty) return;
-
-                      final schedule = selectedDays.map((dayIndex) {
-                        return {
-                          'jour': daysMap[dayIndex],
-                          'heureDebut': daysControllers[dayIndex]?['debut']?.text ?? '09:00',
-                          'heureFin': daysControllers[dayIndex]?['fin']?.text ?? '12:00',
-                        };
-                      }).toList();
-
-                      final modules = (selectedFormation!['modules'] as List<dynamic>? ?? [])
-                          .map((m) => {
-                                'title': m['title'] ?? '',
-                                'assignedHours': m['assignedHours'] ?? 0,
-                              })
-                          .where((m) => (m['assignedHours'] as int) > 0)
-                          .toList();
-
-                      final scheduleData = {
-                        'formateurId': userId,
-                        'formationId': selectedFormation!['formationId'],
-                        'title': selectedFormation!['title'],
-                        'modules': modules,
-                        'schedule': schedule,
-                        'dateCreation': DateTime.now(),
-                        'dateModification': DateTime.now(),
-                      };
 
                       // Schedule stored locally
 

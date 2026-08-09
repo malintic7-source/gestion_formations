@@ -47,7 +47,7 @@ class InvoiceService {
                         style: pw.TextStyle(
                           fontSize: 24,
                           fontWeight: pw.FontWeight.bold,
-                          color: PdfColor.fromInt(AppTheme.primary.value),
+                          color: PdfColor.fromInt(AppTheme.primary.toARGB32()),
                         ),
                       ),
                       pw.SizedBox(height: 4),
@@ -141,7 +141,7 @@ class InvoiceService {
                   // Header row
                   pw.TableRow(
                     decoration: pw.BoxDecoration(
-                      color: PdfColor.fromInt(AppTheme.primary.value),
+                      color: PdfColor.fromInt(AppTheme.primary.toARGB32()),
                     ),
                     children: [
                       pw.Padding(
@@ -228,7 +228,7 @@ class InvoiceService {
                   // Header row
                   pw.TableRow(
                     decoration: pw.BoxDecoration(
-                      color: PdfColor.fromInt(AppTheme.primary.value),
+                      color: PdfColor.fromInt(AppTheme.primary.toARGB32()),
                     ),
                     children: [
                       pw.Padding(

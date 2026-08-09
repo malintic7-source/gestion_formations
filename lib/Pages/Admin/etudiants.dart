@@ -477,8 +477,6 @@ class _AdminEtudiantsState extends State<AdminEtudiants> with TickerProviderStat
 
   Future<void> _assignFormationDialog(String userId) async {
     final formations = _db.getFormations();
-    final user = _db.getUserById(userId);
-
     Formation? selected;
     final modulesControllers = <String, TextEditingController>{};
 

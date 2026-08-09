@@ -16,6 +16,7 @@ class Payment {
   final DateTime? dateEffectuation;
   final String? referenceTransaction;
   final String? motifEchec;
+  final String? motif;
 
   Payment({
     required this.id,
@@ -29,6 +30,7 @@ class Payment {
     this.dateEffectuation,
     this.referenceTransaction,
     this.motifEchec,
+    this.motif,
   });
 
   factory Payment.fromMap(Map<String, dynamic> data, String id) {
@@ -71,6 +73,7 @@ class Payment {
       dateEffectuation: parseDate(data['dateEffectuation']),
       referenceTransaction: data['referenceTransaction'],
       motifEchec: data['motifEchec'],
+      motif: data['motif']?.toString(),
     );
   }
 
@@ -95,6 +98,7 @@ class Payment {
       'dateEffectuation': dateEffectuation?.toIso8601String(),
       'referenceTransaction': referenceTransaction,
       'motifEchec': motifEchec,
+      'motif': motif,
     };
   }
 

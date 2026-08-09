@@ -190,48 +190,6 @@ class _AdminDashboardState extends State<AdminDashboard>
     );
   }
 
-  Future<Map<String, Map<String, int>>> _getMonthlyComparison() async {
-    return {
-      'formateurs': {'current': _db.getUsers().where((u) => u.role == UserRole.formateur).length, 'last': 0},
-      'etudiants': {'current': _db.getUsers().where((u) => u.role == UserRole.etudiant).length, 'last': 0},
-      'formations': {'current': _db.getFormations().length, 'last': 0},
-      'notifications': {'current': _db.getNotifications().length, 'last': 0},
-    };
-  }
-
-  Widget _buildLoadingGrid(bool isMobile) {
-    return GridView.count(
-      crossAxisCount: isMobile ? 2 : 4,
-      shrinkWrap: true,
-      physics: NeverScrollableScrollPhysics(),
-      crossAxisSpacing: 12,
-      mainAxisSpacing: 12,
-      childAspectRatio: 1.35,
-      children: List.generate(
-        4,
-        (index) => Container(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(12),
-            color: Colors.white,
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.05),
-                blurRadius: 16,
-                offset: Offset(0, 6),
-              ),
-            ],
-          ),
-          child: Center(
-            child: CircularProgressIndicator(
-              valueColor: AlwaysStoppedAnimation(AppTheme.primary),
-              strokeWidth: 2,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
   Widget _buildStatCardWithChart({
     required String title,
     required String value,
@@ -544,22 +502,6 @@ class _AdminDashboardState extends State<AdminDashboard>
 
     activities.sort((a, b) => (b['timestamp'] as int).compareTo(a['timestamp'] as int));
     return activities.take(15).toList();
-  }
-
-  String _formatTime(DateTime? dateTime) {
-    if (dateTime == null) return '';
-    final now = DateTime.now();
-    final difference = now.difference(dateTime);
-
-    if (difference.inMinutes < 1) {
-      return 'À l\'instant';
-    } else if (difference.inMinutes < 60) {
-      return 'Il y a ${difference.inMinutes}m';
-    } else if (difference.inHours < 24) {
-      return 'Il y a ${difference.inHours}h';
-    } else {
-      return '${dateTime.day}/${dateTime.month}';
-    }
   }
 
   IconData _getActivityIcon(String type) {

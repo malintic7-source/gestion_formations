@@ -623,8 +623,9 @@ class _NotificationsPageState extends State<NotificationsPage> with TickerProvid
                   color: Colors.transparent,
                   child: InkWell(
                     onTap: () async {
+                      final localContext = context;
                       await _sendNotification();
-                      if (mounted) Navigator.of(context).pop();
+                      if (localContext.mounted) Navigator.of(localContext).pop();
                     },
                     borderRadius: BorderRadius.circular(8),
                     child: Padding(

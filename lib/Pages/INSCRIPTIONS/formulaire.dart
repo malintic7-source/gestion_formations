@@ -502,6 +502,7 @@ _getSteps()[index].subtitle?.toString() ?? '',
         currentStep = 3;
       });
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Erreur lors de l\'inscription : $e')));
     } finally {
       if (mounted) {

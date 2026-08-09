@@ -679,8 +679,9 @@ class _ProfilePageState extends State<ProfilePage> with TickerProviderStateMixin
                       color: Colors.transparent,
                       child: InkWell(
                         onTap: () async {
+                          final localContext = context;
                           if (newPasswordController.text != confirmPasswordController.text) {
-                            ScaffoldMessenger.of(context).showSnackBar(
+                            ScaffoldMessenger.of(localContext).showSnackBar(
                               SnackBar(content: Text('Les mots de passe ne correspondent pas')),
                             );
                             return;
@@ -690,12 +691,13 @@ class _ProfilePageState extends State<ProfilePage> with TickerProviderStateMixin
                               currentPassword: oldPasswordController.text,
                               newPassword: newPasswordController.text,
                             );
-                            if (!mounted) return;
-                            Navigator.pop(context);
-                            ScaffoldMessenger.of(context)
+                            if (!localContext.mounted) return;
+                            Navigator.pop(localContext);
+                            ScaffoldMessenger.of(localContext)
                                 .showSnackBar(SnackBar(content: Text('✅ Mot de passe changé')));
                           } catch (e) {
-                            ScaffoldMessenger.of(context)
+                            if (!localContext.mounted) return;
+                            ScaffoldMessenger.of(localContext)
                                 .showSnackBar(SnackBar(content: Text('❌ Erreur: $e')));
                           }
                         },

@@ -165,7 +165,7 @@ class _AuthWrapperState extends State<AuthWrapper> {
           if (fragParams['inscription'] == 'true' || frag.contains('inscription')) {
             showInscriptionPage = true;
           }
-          if (preselectedFormationId == null || preselectedFormationId!.isEmpty) {
+          if (preselectedFormationId == null || preselectedFormationId.isEmpty) {
             preselectedFormationId = fragParams['formationId'];
           }
         } catch (e) {

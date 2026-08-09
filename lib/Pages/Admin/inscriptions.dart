@@ -928,8 +928,6 @@ class _AdminInscriptionsState extends State<AdminInscriptions> with TickerProvid
           final existing = _db.getInscriptions().where((i) {
             final sameEmail = (i.email ?? '').toString().trim() == (item['email'] ?? '').toString().trim();
             final sameFormation = i.formationId == (item['formationId'] ?? '');
-            final itemDate = item['dateInscription']?.toString() ?? '';
-            final sameDate = i.dateInscription.toIso8601String().startsWith(itemDate.substring(0, itemDate.length.clamp(0, 19)));
             return sameEmail && sameFormation;
           }).isNotEmpty;
 

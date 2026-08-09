@@ -442,7 +442,15 @@ class _AdminPaiementsState extends State<AdminPaiements> with TickerProviderStat
           stream: _db.watchPayments(),
           builder: (context, snapshot) {
             final allPayments = snapshot.data ?? [];
-            if (allPayments.isEmpty) {
+            final filteredPayments = allPayments.where((p) {
+              if (_filterStatus == 'all') return true;
+              if (_filterStatus == 'en_attente') return p.status == PaymentStatus.enAttente;
+              if (_filterStatus == 'incomplet') return p.status == PaymentStatus.echoue;
+              if (_filterStatus == 'valide') return p.status == PaymentStatus.effectue;
+              return true;
+            }).toList();
+
+            if (filteredPayments.isEmpty) {
               return Center(
                 child: Padding(
                   padding: EdgeInsets.all(40),
@@ -460,10 +468,10 @@ class _AdminPaiementsState extends State<AdminPaiements> with TickerProviderStat
             return ListView.builder(
               shrinkWrap: true,
               physics: NeverScrollableScrollPhysics(),
-              itemCount: allPayments.length,
+              itemCount: filteredPayments.length,
               itemBuilder: (context, index) {
-                final p = allPayments[index];
-                return _buildPaymentCard(p.id, p.toMap(), index);
+                final p = filteredPayments[index];
+                return _buildPaymentCard(p, index);
               },
             );
           },
@@ -473,14 +481,23 @@ class _AdminPaiementsState extends State<AdminPaiements> with TickerProviderStat
   }
 
   Future<void> _updatePaymentStatus(String paiementId, String status) async {
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('✅ Statut mis à jour'), backgroundColor: Color(0xFF10B981)),
-    );
+    try {
+      await _db.updatePaymentStatus(paiementId, status);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('✅ Statut mis à jour'), backgroundColor: Color(0xFF10B981)),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('❌ Erreur mise à jour: $e'), backgroundColor: Color(0xFFEF4444)),
+      );
+    }
   }
 
-  Widget _buildPaymentCard(String paiementId, Map<String, dynamic> paiement, int index) {
-    final student = _db.getUserById(paiement['etudiantId'] ?? '');
+  Widget _buildPaymentCard(Payment paiementObj, int index) {
+    final student = _db.getUserById(paiementObj.etudiantId);
+    final paiement = paiementObj.toMap();
 
     return SlideInUp(
       delay: Duration(milliseconds: 50 + (index * 40)),
@@ -520,7 +537,7 @@ class _AdminPaiementsState extends State<AdminPaiements> with TickerProviderStat
                         ),
                         SizedBox(height: 4),
                         Text(
-                          '${paiement['montant']?.toStringAsFixed(0) ?? 0} FCFA',
+                          '${paiementObj.montant.toStringAsFixed(0)} FCFA',
                           style: GoogleFonts.poppins(
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
@@ -528,10 +545,30 @@ class _AdminPaiementsState extends State<AdminPaiements> with TickerProviderStat
                           ),
                         ),
                         SizedBox(height: 6),
-                        Text(
-                          paiement['motif'] ?? '',
-                          style: GoogleFonts.poppins(fontSize: 11, color: Colors.black54),
-                        ),
+                        // Motif (optionnel)
+                        if ((paiement['motif'] ?? '').toString().isNotEmpty)
+                          Text(
+                            paiement['motif'] ?? '',
+                            style: GoogleFonts.poppins(fontSize: 11, color: Colors.black54),
+                          ),
+                        // Référence transaction (si disponible)
+                        if ((paiementObj.referenceTransaction ?? '').toString().isNotEmpty)
+                          Padding(
+                            padding: EdgeInsets.only(top: 6),
+                            child: Text(
+                              'Réf: ${paiementObj.referenceTransaction}',
+                              style: GoogleFonts.poppins(fontSize: 11, color: Colors.black54, fontWeight: FontWeight.w600),
+                            ),
+                          ),
+                        // Date d'effectuation (si disponible)
+                        if (paiementObj.dateEffectuation != null)
+                          Padding(
+                            padding: EdgeInsets.only(top: 4),
+                            child: Text(
+                              'Le: ${paiementObj.dateEffectuation!.toLocal().toString().split('.').first}',
+                              style: GoogleFonts.poppins(fontSize: 11, color: Colors.black45),
+                            ),
+                          ),
                       ],
                     ),
                   ),
@@ -541,15 +578,15 @@ class _AdminPaiementsState extends State<AdminPaiements> with TickerProviderStat
                       Container(
                         padding: EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                         decoration: BoxDecoration(
-                          color: _getStatusColor(paiement['statutMontant'] ?? 'en_attente').withValues(alpha: 0.1),
+                          color: _getStatusColorFromPayment(paiementObj.status).withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(6),
                         ),
                         child: Text(
-                          _getStatusLabel(paiement['statutMontant'] ?? 'en_attente'),
+                          _getStatusLabelFromPayment(paiementObj.status),
                           style: GoogleFonts.poppins(
                             fontSize: 10,
                             fontWeight: FontWeight.w700,
-                            color: _getStatusColor(paiement['statutMontant'] ?? 'en_attente'),
+                            color: _getStatusColorFromPayment(paiementObj.status),
                           ),
                         ),
                       ),
@@ -557,17 +594,17 @@ class _AdminPaiementsState extends State<AdminPaiements> with TickerProviderStat
                       Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          if ((paiement['statutMontant'] ?? 'en_attente') != 'valide')
+                          if (paiementObj.status != PaymentStatus.effectue)
                             ElevatedButton(
-                              onPressed: () => _updatePaymentStatus(paiementId, 'valide'),
+                              onPressed: () => _updatePaymentStatus(paiementObj.id, 'effectue'),
                               style: ElevatedButton.styleFrom(backgroundColor: Color(0xFF10B981), minimumSize: Size(80, 36)),
                               child: Text('Valider'),
                             ),
                           SizedBox(width: 8),
                           ElevatedButton(
-                            onPressed: () => _updatePaymentStatus(paiementId, 'incomplet'),
+                            onPressed: () => _updatePaymentStatus(paiementObj.id, 'echoue'),
                             style: ElevatedButton.styleFrom(backgroundColor: Colors.orange, minimumSize: Size(80, 36)),
-                            child: Text('Incomplet'),
+                            child: Text('Marquer échoué'),
                           ),
                         ],
                       ),
@@ -617,6 +654,7 @@ class _AdminPaiementsState extends State<AdminPaiements> with TickerProviderStat
         status: _selectedStatus == 'valide' ? PaymentStatus.effectue : PaymentStatus.enAttente,
         methode: PaymentMethod.especes,
         dateCreation: DateTime.now(),
+        motif: _motif.isNotEmpty ? _motif : null,
       );
 
       _db.addPayment(newPayment);
@@ -692,15 +730,22 @@ class _AdminPaiementsState extends State<AdminPaiements> with TickerProviderStat
       }
 
       // Calculate statistics
+      String statusKeyFromMap(Map<String, dynamic> m) {
+        final s = (m['status'] ?? '').toString();
+        if (s.contains('effectue')) return 'valide';
+        if (s.contains('echoue')) return 'incomplet';
+        return 'en_attente';
+      }
+
       final statusCounts = {
-        'en_attente': payments.where((p) => p['statutMontant'] == 'en_attente').length,
-        'incomplet': payments.where((p) => p['statutMontant'] == 'incomplet').length,
-        'valide': payments.where((p) => p['statutMontant'] == 'valide').length,
+        'en_attente': payments.where((p) => statusKeyFromMap(p) == 'en_attente').length,
+        'incomplet': payments.where((p) => statusKeyFromMap(p) == 'incomplet').length,
+        'valide': payments.where((p) => statusKeyFromMap(p) == 'valide').length,
       };
 
       final totalAmount = payments.fold<double>(
         0,
-        (sum, p) => sum + (p['montant']?.toDouble() ?? 0),
+        (sum, p) => sum + ((p['montant'] is num) ? (p['montant'] as num).toDouble() : double.tryParse(p['montant']?.toString() ?? '0') ?? 0),
       );
 
       // Generate PDF
@@ -736,29 +781,25 @@ class _AdminPaiementsState extends State<AdminPaiements> with TickerProviderStat
     }
   }
 
-  Color _getStatusColor(String status) {
+  Color _getStatusColorFromPayment(PaymentStatus status) {
     switch (status) {
-      case 'en_attente':
+      case PaymentStatus.enAttente:
         return Colors.amber;
-      case 'incomplet':
-        return Colors.orange;
-      case 'valide':
+      case PaymentStatus.effectue:
         return Color(0xFF10B981);
-      default:
-        return Colors.grey;
+      case PaymentStatus.echoue:
+        return Colors.orange;
     }
   }
 
-  String _getStatusLabel(String status) {
+  String _getStatusLabelFromPayment(PaymentStatus status) {
     switch (status) {
-      case 'en_attente':
+      case PaymentStatus.enAttente:
         return 'En Attente';
-      case 'incomplet':
-        return 'Incomplet';
-      case 'valide':
+      case PaymentStatus.effectue:
         return 'Validé';
-      default:
-        return 'Unknown';
+      case PaymentStatus.echoue:
+        return 'Échoué';
     }
   }
 }

@@ -419,10 +419,12 @@ class _StudentFormationsState extends State<StudentFormations> with TickerProvid
   }
 
   Future<void> _showFormationQrDialog(BuildContext context, String formationTitle, String formationId) async {
+    final localContext = context;
     final shareUrl = await _buildLocalShareUrl(formationId);
+    if (!localContext.mounted) return;
 
     await showDialog(
-      context: context,
+      context: localContext,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Text(
@@ -485,13 +487,14 @@ class _StudentFormationsState extends State<StudentFormations> with TickerProvid
           ),
           TextButton(
             onPressed: () async {
+              final dialogContext = context;
               final uri = Uri.parse(shareUrl);
               if (await canLaunchUrl(uri)) {
                 await launchUrl(uri, mode: LaunchMode.externalApplication);
-              } else if (!mounted) {
+              } else if (!dialogContext.mounted) {
                 return;
               } else {
-                ScaffoldMessenger.of(context).showSnackBar(
+                ScaffoldMessenger.of(dialogContext).showSnackBar(
                   SnackBar(content: Text('Impossible d’ouvrir le lien local.')),
                 );
               }
@@ -509,10 +512,11 @@ class _StudentFormationsState extends State<StudentFormations> with TickerProvid
               color: Colors.transparent,
               child: InkWell(
                 onTap: () async {
+                  final dialogContext = context;
                   final bytes = await _captureQrPng(qrKey);
                   if (bytes == null) {
-                    if (!mounted) return;
-                    ScaffoldMessenger.of(context).showSnackBar(
+                    if (!dialogContext.mounted) return;
+                    ScaffoldMessenger.of(dialogContext).showSnackBar(
                       SnackBar(content: Text('Impossible de générer le QR.')),
                     );
                     return;
@@ -531,7 +535,7 @@ $shareUrl
 👇 Scannez le QR code ci-dessous pour accéder directement!
                   ''';
 
-                  if (!mounted) return;
+                  if (!dialogContext.mounted) return;
                   Share.shareXFiles(
                     [XFile(file.path)],
                     text: shareText,
