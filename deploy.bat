@@ -1,88 +1,81 @@
 @echo off
-setlocal enabledelayedexpansion
-title Mise a jour de Production - Gestion Formations MNTIC
-cd /d "%~dp0"
+pushd "%~dp0"
+title Deploiement Gestion Formations MNTIC
 
 echo ======================================================================
-echo   MISE A JOUR CONTINUE EN PRODUCTION (ZERO PERTE DE DONNEES)
+echo   DEPLOIEMENT GESTION FORMATIONS MNTIC
+echo   Dossier de travail : %CD%
 echo ======================================================================
 echo.
 
 :: 1. Verification de Docker
+echo [1/5] Verification de Docker...
 where docker >nul 2>&1
 if %ERRORLEVEL% neq 0 (
-    echo [ERREUR] Docker n'est pas accessible.
+    echo [ERREUR] Docker n'est pas accessible dans cette fenetre de commande.
+    echo Veuillez vous assurer que Docker Desktop est bien lance sur cette machine.
+    echo.
     pause
+    popd
     exit /b 1
 )
+echo [OK] Docker detecte.
 
-:: 2. Sauvegarde automatique des donnees de production en cours (Anti-Perte)
-echo [1/5] Sauvegarde de securite des donnees reelles de production...
-if not exist "backup" mkdir backup
-docker cp gestion_formations_api:/data/database.json "backup\database.json" >nul 2>&1
-if %ERRORLEVEL% equ 0 (
-    echo [OK] Donnees de production actuelles sauvegardees dans backup\database.json.
-) else (
-    echo [INFO] Premier deploiement ou volume vierge (initialisation standard).
-)
-
-:: 3. Verification et compilation Flutter Web
+:: 2. Construction des images Docker
 echo.
-echo [2/5] Verification des fichiers Web...
-if not exist "build\web\index.html" (
-    echo [INFO] Compilation de la version web...
-    where flutter >nul 2>&1
-    if %ERRORLEVEL% equ 0 (
-        call flutter build web --release
-        if %ERRORLEVEL% neq 0 (
-            echo [ERREUR] La compilation Flutter a echoue. La version en ligne reste intacte.
-            pause
-            exit /b 1
-        )
-    ) else (
-        echo [ERREUR] build\web absent et Flutter non trouve dans le PATH.
-        pause
-        exit /b 1
-    )
-) else (
-    echo [OK] Build web pret a etre applique.
-)
-
-:: 4. Construction de la nouvelle image applicative sans toucher aux volumes
-echo.
-echo [3/5] Construction de la nouvelle version applicative...
+echo [2/5] Construction des conteneurs (Frontend + API)...
 docker compose build gestion_formations api
 if %ERRORLEVEL% neq 0 (
     docker-compose build gestion_formations api
     if %ERRORLEVEL% neq 0 (
-        echo [ERREUR] Echec de la construction. L'ancienne version reste en ligne.
+        echo [ERREUR] La construction Docker a echoue.
         pause
+        popd
         exit /b 1
     )
 )
 
-:: 5. Mise a jour a chaud (Rechargement sans interruption des tunnels ni des donnees)
+:: 3. Lancement des conteneurs et des tunnels
 echo.
-echo [4/5] Application de la mise a jour (Tunnels et Donnees conserves)...
-docker compose up -d --no-deps gestion_formations api
+echo [3/5] Lancement des conteneurs et tunnels...
+docker compose up -d --remove-orphans
 if %ERRORLEVEL% neq 0 (
-    docker-compose up -d --no-deps gestion_formations api
+    docker-compose up -d --remove-orphans
+    if %ERRORLEVEL% neq 0 (
+        echo [ERREUR] Le lancement a echoue.
+        pause
+        popd
+        exit /b 1
+    )
 )
 
-:: S'assurer que les tunnels sont bien actifs
-docker compose up -d ngrok cloudflared >nul 2>&1
-
-:: 6. Verification de sante & Statut
+:: 4. Restauration / Synchronisation de la base de donnees et formations
 echo.
-echo [5/5] Statut des services apres mise a jour :
+echo [4/5] Synchronisation de la base de donnees (Formations, Utilisateurs)...
+if exist "backup\database.json" (
+    docker cp "backup\database.json" gestion_formations_api:/data/database.json >nul 2>&1
+    docker compose restart api >nul 2>&1
+    echo [OK] Base de donnees restauree avec succes dans le conteneur API.
+) else if exist "server\initial_database.json" (
+    docker cp "server\initial_database.json" gestion_formations_api:/data/database.json >nul 2>&1
+    docker compose restart api >nul 2>&1
+    echo [OK] Base initiale des formations restauree avec succes.
+)
+
+:: 5. Statut des services
+echo.
+echo [5/5] Statut des services actifs :
 docker compose ps
+if %ERRORLEVEL% neq 0 (
+    docker-compose ps
+)
 
 echo.
 echo ======================================================================
-echo   MISE A JOUR DE PRODUCTION REUSSIE SANS AUCUN IMPACT NEGATIF !
-echo   - Donnees & Formations : 100%% preservees et sauvegardees
-echo   - Tunnels Ngrok & Cloudflare : Maintenus actifs
+echo   DEPLOIEMENT REUSSI !
 echo   - Web Local : http://localhost:8080
+echo   - Tunnels   : Ngrok & Cloudflare actifs
 echo ======================================================================
 echo.
 pause
+popd

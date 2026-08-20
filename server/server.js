@@ -139,9 +139,23 @@ app.get('/api/auth/session', requireSession, (req, res) => {
   res.json(user);
 });
 
-app.get('/api/state', requireEmployee, (_, res) => {
+app.get('/api/state', (req, res) => {
   res.setHeader('Cache-Control', 'no-store');
-  res.json(readState());
+  const state = readState();
+  const session = sessionFromRequest(req);
+  if (isEmployee(session)) {
+    return res.json(state);
+  }
+  // Public access (catalog of formations for visitors, students and login screen)
+  return res.json({
+    users: [],
+    formations: state.formations || [],
+    inscriptions: [],
+    payments: [],
+    notifications: [],
+    audit_logs: [],
+    seances: state.seances || [],
+  });
 });
 
 // Migration contrôlée : le premier navigateur qui possède encore les données
@@ -234,4 +248,5 @@ app.delete('/api/:collection/:id', (req, res) => {
 });
 
 app.listen(5001, () => console.log('API locale disponible sur le port 5001'));
+
 
