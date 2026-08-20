@@ -11,7 +11,7 @@ class WelcomPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
-    final isMobile = size.width < 600;
+    final isMobile = size.width < 800;
 
     return Scaffold(
       backgroundColor: AppTheme.background,
@@ -26,12 +26,41 @@ class WelcomPage extends StatelessWidget {
   // MOBILE LAYOUT - Clean responsive layout
   Widget _buildMobileLayout(BuildContext context) {
     return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 36),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 32),
       child: Column(
         children: [
-          const SizedBox(height: 16),
-          _buildLogo(160),
-          const SizedBox(height: 40),
+          const SizedBox(height: 12),
+          _buildLogo(140),
+          const SizedBox(height: 20),
+          Text(
+            'M@LI-NTIC',
+            style: GoogleFonts.poppins(
+              fontSize: 24,
+              fontWeight: FontWeight.w800,
+              color: AppTheme.textPrimary,
+              letterSpacing: -0.5,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 6),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+            decoration: BoxDecoration(
+              color: AppTheme.primary.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: AppTheme.primary.withValues(alpha: 0.15)),
+            ),
+            child: Text(
+              'Votre partenaire tech — 4 pôles à votre service',
+              style: GoogleFonts.poppins(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: AppTheme.primary,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ),
+          const SizedBox(height: 32),
           _buildServiceCardsMobile(context),
           const SizedBox(height: 24),
         ],
@@ -42,8 +71,8 @@ class WelcomPage extends StatelessWidget {
   // DESKTOP LAYOUT - Professional modern layout
   Widget _buildDesktopLayout(BuildContext context) {
     final size = MediaQuery.of(context).size;
-    final horizontalPadding = size.width < 1200 ? 40.0 : 80.0;
-    final verticalPadding = size.width < 1200 ? 48.0 : 64.0;
+    final horizontalPadding = size.width < 1200 ? 36.0 : 72.0;
+    final verticalPadding = size.width < 1200 ? 40.0 : 56.0;
 
     return Center(
       child: SingleChildScrollView(
@@ -56,55 +85,77 @@ class WelcomPage extends StatelessWidget {
               Expanded(
                 flex: 5,
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.center,
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    // Center the logo above the title and make it larger on desktop
-                    Center(child: _buildLogo(240)),
-                    const SizedBox(height: 28),
-                    const SizedBox(height: 28),
-                    Center(
-                      child: Container(
-                        decoration: BoxDecoration(
-                          gradient: AppTheme.heroGradient,
-                          borderRadius: BorderRadius.circular(14),
-                          boxShadow: AppTheme.heroShadow,
+                    _buildLogo(220),
+                    const SizedBox(height: 24),
+                    Text(
+                      'M@LI-NTIC',
+                      style: GoogleFonts.poppins(
+                        fontSize: 30,
+                        fontWeight: FontWeight.w800,
+                        color: AppTheme.textPrimary,
+                        letterSpacing: -0.5,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: AppTheme.primary.withValues(alpha: 0.08),
+                        borderRadius: BorderRadius.circular(24),
+                        border: Border.all(color: AppTheme.primary.withValues(alpha: 0.18)),
+                      ),
+                      child: Text(
+                        'Votre partenaire tech — 4 pôles à votre service',
+                        style: GoogleFonts.poppins(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: AppTheme.primary,
                         ),
-                        child: Material(
-                          color: Colors.transparent,
-                          child: InkWell(
-                            onTap: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => const SignInPage(),
-                                ),
-                              );
-                            },
-                            borderRadius: BorderRadius.circular(14),
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 24,
-                                vertical: 16,
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                    const SizedBox(height: 28),
+                    Container(
+                      decoration: BoxDecoration(
+                        gradient: AppTheme.heroGradient,
+                        borderRadius: BorderRadius.circular(14),
+                        boxShadow: AppTheme.heroShadow,
+                      ),
+                      child: Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const SignInPage(),
                               ),
-                              child: FittedBox(
-                                fit: BoxFit.scaleDown,
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Text(
-                                      'Accéder à mon espace',
-                                      style: GoogleFonts.poppins(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.w700,
-                                        color: Colors.white,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 12),
-                                    const Icon(Icons.arrow_forward_rounded, color: Colors.white, size: 20),
-                                  ],
+                            );
+                          },
+                          borderRadius: BorderRadius.circular(14),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 28,
+                              vertical: 16,
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  'Accéder à mon espace',
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w700,
+                                    color: Colors.white,
+                                  ),
                                 ),
-                              ),
+                                const SizedBox(width: 12),
+                                const Icon(Icons.arrow_forward_rounded, color: Colors.white, size: 20),
+                              ],
                             ),
                           ),
                         ),
@@ -113,7 +164,7 @@ class WelcomPage extends StatelessWidget {
                   ],
                 ),
               ),
-              SizedBox(width: size.width < 1200 ? 40 : 64),
+              SizedBox(width: size.width < 1200 ? 36 : 60),
               Expanded(flex: 5, child: _buildServicesListDesktop(context)),
             ],
           ),
@@ -320,7 +371,7 @@ class WelcomPage extends StatelessWidget {
       },
       {
         'title': 'e-Commerce',
-        'subtitle': 'Boutique en ligne, produits informatiques et commandes',
+        'subtitle': 'Boutique en ligne, matériel et solutions informatiques',
         'icon': Icons.shopping_cart_rounded,
         'gradient': AppTheme.accentGradient,
         'action': () async {
@@ -329,7 +380,7 @@ class WelcomPage extends StatelessWidget {
       },
       {
         'title': 'Incubator',
-        'subtitle': 'Accompagnement des porteurs de projets et startups',
+        'subtitle': 'Incubateur de startups, accélération et mentorat tech',
         'icon': Icons.lightbulb_rounded,
         'gradient': AppTheme.successGradient,
         'action': () {
@@ -348,111 +399,72 @@ class WelcomPage extends StatelessWidget {
     ];
 
     return Column(
-      children: [
-        ...List.generate(services.length, (index) {
-          final service = services[index];
-          return Padding(
-            padding: const EdgeInsets.only(bottom: 14),
-            child: Container(
-              decoration: BoxDecoration(
+      children: List.generate(services.length, (index) {
+        final service = services[index];
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 14),
+          child: Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: AppTheme.cardShadow,
+            ),
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: service['action'] as VoidCallback,
                 borderRadius: BorderRadius.circular(16),
-                color: Colors.white,
-                boxShadow: AppTheme.cardShadow,
-              ),
-              child: Material(
-                color: Colors.transparent,
-                child: InkWell(
-                  onTap: service['action'] as VoidCallback,
-                  borderRadius: BorderRadius.circular(16),
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Row(
-                      children: [
-                        Container(
-                          width: 48,
-                          height: 48,
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(12),
-                            gradient: service['gradient'] as LinearGradient,
-                          ),
-                          child: Icon(
-                            service['icon'] as IconData,
-                            color: Colors.white,
-                            size: 24,
-                          ),
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 48,
+                        height: 48,
+                        decoration: BoxDecoration(
+                          gradient: service['gradient'] as LinearGradient,
+                          borderRadius: BorderRadius.circular(12),
                         ),
-                        const SizedBox(width: 14),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                service['title'] as String,
-                                style: GoogleFonts.poppins(
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.w700,
-                                  color: AppTheme.textPrimary,
-                                ),
-                              ),
-                              const SizedBox(height: 2),
-                              Text(
-                                service['subtitle'] as String,
-                                style: GoogleFonts.poppins(
-                                  fontSize: 12,
-                                  color: AppTheme.textSecondary,
-                                  fontWeight: FontWeight.w400,
-                                ),
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ],
-                          ),
+                        child: Icon(
+                          service['icon'] as IconData,
+                          color: Colors.white,
+                          size: 24,
                         ),
-                        const Icon(Icons.chevron_right_rounded, color: AppTheme.textMuted, size: 20),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          );
-        }),
-        const SizedBox(height: 12),
-        Container(
-          width: double.infinity,
-          decoration: BoxDecoration(
-            gradient: AppTheme.heroGradient,
-            borderRadius: BorderRadius.circular(14),
-            boxShadow: AppTheme.heroShadow,
-          ),
-          child: Material(
-            color: Colors.transparent,
-            child: InkWell(
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const SignInPage()),
-                );
-              },
-              borderRadius: BorderRadius.circular(14),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                child: Center(
-                  child: Text(
-                    'Se Connecter à la Plateforme',
-                    style: GoogleFonts.poppins(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w700,
-                      color: Colors.white,
-                    ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              service['title'] as String,
+                              style: GoogleFonts.poppins(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w700,
+                                color: AppTheme.textPrimary,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              service['subtitle'] as String,
+                              style: GoogleFonts.poppins(
+                                fontSize: 12,
+                                color: AppTheme.textSecondary,
+                              ),
+                              maxLines: 2,
+                            ),
+                          ],
+                        ),
+                      ),
+                      const Icon(Icons.chevron_right_rounded, color: AppTheme.textSecondary, size: 20),
+                    ],
                   ),
                 ),
               ),
             ),
           ),
-        ),
-      ],
+        );
+      }),
     );
   }
 }
-
