@@ -1398,3 +1398,4 @@ class _AdminInscriptionsState extends State<AdminInscriptions> with TickerProvid
     return formationData['prix']?.toString() ?? '0';
   }
 }
+
