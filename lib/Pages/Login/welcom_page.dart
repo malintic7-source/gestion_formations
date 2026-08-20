@@ -51,7 +51,7 @@ class WelcomPage extends StatelessWidget {
               border: Border.all(color: AppTheme.primary.withValues(alpha: 0.15)),
             ),
             child: Text(
-              'Votre partenaire tech — 4 pôles à votre service',
+              'L’univers des technologies — 4 pôles à vos services',
               style: GoogleFonts.poppins(
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
@@ -109,7 +109,7 @@ class WelcomPage extends StatelessWidget {
                         border: Border.all(color: AppTheme.primary.withValues(alpha: 0.18)),
                       ),
                       child: Text(
-                        'Votre partenaire tech — 4 pôles à votre service',
+                        'L’univers des technologies — 4 pôles à vos services',
                         style: GoogleFonts.poppins(
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
@@ -468,3 +468,4 @@ class WelcomPage extends StatelessWidget {
     );
   }
 }
+
