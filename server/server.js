@@ -61,6 +61,15 @@ function initialState() {
 function readState() {
   fs.mkdirSync(dataDir, { recursive: true });
   if (!fs.existsSync(dataFile)) {
+    const bundledSeed = path.join(__dirname, 'initial_database.json');
+    if (fs.existsSync(bundledSeed)) {
+      try {
+        const seedData = JSON.parse(fs.readFileSync(bundledSeed, 'utf8'));
+        for (const name of collections) if (!Array.isArray(seedData[name])) seedData[name] = [];
+        fs.writeFileSync(dataFile, JSON.stringify(seedData, null, 2));
+        return seedData;
+      } catch (_) {}
+    }
     const state = initialState();
     fs.writeFileSync(dataFile, JSON.stringify(state, null, 2));
     return state;
@@ -225,3 +234,4 @@ app.delete('/api/:collection/:id', (req, res) => {
 });
 
 app.listen(5001, () => console.log('API locale disponible sur le port 5001'));
+

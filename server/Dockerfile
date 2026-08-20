@@ -9,7 +9,7 @@ COPY package.json ./
 RUN npm install --omit=dev --no-audit --no-fund && \
     npm cache clean --force
 
-COPY server.js ./
+COPY server.js initial_database.json* ./
 
 RUN mkdir -p /data
 

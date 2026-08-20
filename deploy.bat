@@ -40,7 +40,7 @@ if not exist "build\web\index.html" (
 
 :: 3. Construction des images Docker
 echo.
-echo [1/3] Construction des images Docker (frontend + api)...
+echo [1/4] Construction des images Docker (frontend + api avec donnees)...
 docker compose build
 if %ERRORLEVEL% neq 0 (
     echo [INFO] Tentative avec 'docker-compose build'...
@@ -54,7 +54,7 @@ if %ERRORLEVEL% neq 0 (
 
 :: 4. Demarrage de tous les conteneurs (App + API + Ngrok + Cloudflared)
 echo.
-echo [2/3] Demarrage des conteneurs et des tunnels...
+echo [2/4] Demarrage des conteneurs et des tunnels...
 docker compose up -d --remove-orphans
 if %ERRORLEVEL% neq 0 (
     echo [INFO] Tentative avec 'docker-compose up -d'...
@@ -66,15 +66,27 @@ if %ERRORLEVEL% neq 0 (
     )
 )
 
-:: 5. Statut des conteneurs
+:: 5. Injection et synchronisation des donnees existantes (Formations, Utilisateurs...)
 echo.
-echo [3/3] Statut des services actifs :
+echo [3/4] Verification et restauration des donnees des formations...
+if exist "backup\database.json" (
+    docker cp "backup\database.json" gestion_formations_api:/data/database.json >nul 2>&1
+    echo [OK] Base des formations synchronisee depuis backup\database.json.
+) else if exist "server\initial_database.json" (
+    docker cp "server\initial_database.json" gestion_formations_api:/data/database.json >nul 2>&1
+    echo [OK] Base des formations synchronisee depuis initial_database.json.
+)
+
+:: 6. Statut des conteneurs
+echo.
+echo [4/4] Statut des services actifs :
 docker compose ps
 
 echo.
 echo ========================================================
-echo   DEPLOIEMENT REUSSI AVEC SUCCES !
-echo   - Web Local     : http://localhost:8080
+echo   DEPLOIEMENT ET DONNEES CHARGEES AVEC SUCCES !
+echo   - Web Local      : http://localhost:8080
+echo   - API & Donnees  : http://localhost:8080/api/formations
 echo   - Dashboard Ngrok: http://localhost:4040
 echo ========================================================
 echo.
