@@ -5,12 +5,12 @@ services:
       dockerfile: Dockerfile.fast
     container_name: gestion_formations_app
     ports:
-      - "0.0.0.0:8080:80"
+      - "8080:80"
     restart: always
     init: true
     stop_grace_period: 15s
     environment:
-      - NGINX_HOST=0.0.0.0
+      - NGINX_HOST=localhost
       - NGINX_PORT=80
     healthcheck:
       test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1/ || exit 1"]
@@ -61,7 +61,7 @@ services:
       gestion_formations:
         condition: service_healthy
     ports:
-      - "0.0.0.0:4040:4040"
+      - "4040:4040"
     environment:
       NGROK_AUTHTOKEN: ${NGROK_AUTHTOKEN:?Ajoutez NGROK_AUTHTOKEN dans le fichier .env}
       NGROK_DOMAIN: ${NGROK_DOMAIN:-boil-prude-curry.ngrok-free.dev}
