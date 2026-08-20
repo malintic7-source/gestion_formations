@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:gestion_formations/config/theme.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:gestion_formations/Pages/Login/welcom_page.dart';
 import 'package:gestion_formations/Pages/home_screen.dart';
 import 'package:gestion_formations/Services/auth_provider.dart';
 
@@ -27,10 +28,39 @@ class _SignInPageState extends State<SignInPage> {
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
-    final isMobile = size.width < 900;
+    final isMobile = size.width < 600;
 
     return Scaffold(
       backgroundColor: AppTheme.background,
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        automaticallyImplyLeading: false,
+        leading: IconButton(
+          onPressed: () {
+            if (Navigator.of(context).canPop()) {
+              Navigator.of(context).pop();
+            } else {
+              Navigator.of(context).pushReplacement(
+                MaterialPageRoute(builder: (context) => const WelcomPage()),
+              );
+            }
+          },
+          icon: const Icon(Icons.arrow_back_rounded, color: AppTheme.textPrimary),
+          tooltip: 'Retour',
+        ),
+        actions: [
+          IconButton(
+            onPressed: () {
+              Navigator.of(context).pushReplacement(
+                MaterialPageRoute(builder: (context) => const WelcomPage()),
+              );
+            },
+            icon: const Icon(Icons.close_rounded, color: AppTheme.textPrimary),
+            tooltip: 'Fermer',
+          ),
+        ],
+      ),
       body: SafeArea(
         child: Stack(
           children: [
@@ -156,7 +186,7 @@ class _SignInPageState extends State<SignInPage> {
         ),
         const SizedBox(height: 20),
         Text(
-          'Gestion Formations',
+          'Malintic',
           style: GoogleFonts.poppins(
             fontSize: titleSize,
             fontWeight: FontWeight.w800,
@@ -173,12 +203,13 @@ class _SignInPageState extends State<SignInPage> {
       width: double.infinity,
       constraints: const BoxConstraints(maxWidth: 440),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(24),
         color: Colors.white,
+        border: Border.all(color: const Color(0xFFF1F5F9), width: 1.5),
         boxShadow: AppTheme.cardShadow,
       ),
       child: Padding(
-        padding: const EdgeInsets.all(28),
+        padding: const EdgeInsets.all(32),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -186,16 +217,17 @@ class _SignInPageState extends State<SignInPage> {
             Text(
               'Connexion',
               style: GoogleFonts.poppins(
-                fontSize: 24,
+                fontSize: 26,
                 fontWeight: FontWeight.w800,
                 color: AppTheme.textPrimary,
+                letterSpacing: -0.5,
               ),
             ),
             const SizedBox(height: 6),
             Text(
-              'Entrez vos identifiants pour continuer',
+              'Entrez vos identifiants pour accéder à votre compte.',
               style: GoogleFonts.poppins(
-                fontSize: 14,
+                fontSize: 13,
                 color: AppTheme.textSecondary,
                 fontWeight: FontWeight.w400,
               ),
@@ -204,7 +236,7 @@ class _SignInPageState extends State<SignInPage> {
             _buildEmailField(),
             const SizedBox(height: 16),
             _buildPasswordField(),
-            const SizedBox(height: 12),
+            const SizedBox(height: 14),
             Align(
               alignment: Alignment.centerRight,
               child: TextButton(
@@ -248,10 +280,10 @@ class _SignInPageState extends State<SignInPage> {
         color: AppTheme.textPrimary,
       ),
       decoration: const InputDecoration(
-        hintText: 'Adresse email',
+        labelText: 'Nom d\'utilisateur ou Email',
+        hintText: 'admin@mntic.ml',
         prefixIcon: Icon(
-          Icons.mail_outline_rounded,
-          color: AppTheme.primary,
+          Icons.person_outline_rounded,
           size: 20,
         ),
       ),
@@ -268,10 +300,10 @@ class _SignInPageState extends State<SignInPage> {
         color: AppTheme.textPrimary,
       ),
       decoration: InputDecoration(
-        hintText: 'Mot de passe',
+        labelText: 'Mot de passe',
+        hintText: '00000000 (par défaut)',
         prefixIcon: const Icon(
           Icons.lock_outline_rounded,
-          color: AppTheme.primary,
           size: 20,
         ),
         suffixIcon: IconButton(
@@ -293,7 +325,7 @@ class _SignInPageState extends State<SignInPage> {
   Widget _buildLoginButton() {
     return Container(
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(14),
         gradient: AppTheme.heroGradient,
         boxShadow: AppTheme.heroShadow,
       ),
@@ -301,7 +333,7 @@ class _SignInPageState extends State<SignInPage> {
         color: Colors.transparent,
         child: InkWell(
           onTap: _isLoading ? null : _handleLogin,
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(14),
           child: Padding(
             padding: const EdgeInsets.symmetric(vertical: 16),
             child: Center(
@@ -320,6 +352,7 @@ class _SignInPageState extends State<SignInPage> {
                         fontSize: 15,
                         fontWeight: FontWeight.w700,
                         color: Colors.white,
+                        letterSpacing: 0.3,
                       ),
                     ),
             ),

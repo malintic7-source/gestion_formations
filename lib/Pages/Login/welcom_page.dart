@@ -11,7 +11,7 @@ class WelcomPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
-    final isMobile = size.width < 900;
+    final isMobile = size.width < 600;
 
     return Scaffold(
       backgroundColor: AppTheme.background,
@@ -30,9 +30,7 @@ class WelcomPage extends StatelessWidget {
       child: Column(
         children: [
           const SizedBox(height: 16),
-          _buildLogo(),
-          const SizedBox(height: 36),
-          _buildHeader(),
+          _buildLogo(160),
           const SizedBox(height: 40),
           _buildServiceCardsMobile(context),
           const SizedBox(height: 24),
@@ -62,67 +60,51 @@ class WelcomPage extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     // Center the logo above the title and make it larger on desktop
-                    Center(child: _buildLogo(180)),
+                    Center(child: _buildLogo(240)),
                     const SizedBox(height: 28),
-                    Text(
-                      'M@LI-NTIC',
-                      textAlign: TextAlign.center,
-                      style: GoogleFonts.poppins(
-                        fontSize: 52,
-                        fontWeight: FontWeight.w900,
-                        color: AppTheme.textPrimary,
-                        letterSpacing: -1,
-                      ),
-                    ),
-                    const SizedBox(height: 18),
-                    Text(
-                      'Plateforme intelligente de gestion de formations, prestations & incubation.',
-                      textAlign: TextAlign.center,
-                      style: GoogleFonts.poppins(
-                        fontSize: 18,
-                        color: AppTheme.textSecondary,
-                        fontWeight: FontWeight.w400,
-                        height: 1.6,
-                      ),
-                    ),
-                    const SizedBox(height: 36),
-                    Container(
-                      decoration: BoxDecoration(
-                        gradient: AppTheme.heroGradient,
-                        borderRadius: BorderRadius.circular(14),
-                        boxShadow: AppTheme.heroShadow,
-                      ),
-                      child: Material(
-                        color: Colors.transparent,
-                        child: InkWell(
-                          onTap: () {
-                            Navigator.pushReplacement(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => const SignInPage(),
-                              ),
-                            );
-                          },
+                    const SizedBox(height: 28),
+                    Center(
+                      child: Container(
+                        decoration: BoxDecoration(
+                          gradient: AppTheme.heroGradient,
                           borderRadius: BorderRadius.circular(14),
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 36,
-                              vertical: 16,
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Text(
-                                  'Accéder à mon espace',
-                                  style: GoogleFonts.poppins(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w700,
-                                    color: Colors.white,
-                                  ),
+                          boxShadow: AppTheme.heroShadow,
+                        ),
+                        child: Material(
+                          color: Colors.transparent,
+                          child: InkWell(
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => const SignInPage(),
                                 ),
-                                const SizedBox(width: 12),
-                                const Icon(Icons.arrow_forward_rounded, color: Colors.white, size: 20),
-                              ],
+                              );
+                            },
+                            borderRadius: BorderRadius.circular(14),
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 24,
+                                vertical: 16,
+                              ),
+                              child: FittedBox(
+                                fit: BoxFit.scaleDown,
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text(
+                                      'Accéder à mon espace',
+                                      style: GoogleFonts.poppins(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w700,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    const Icon(Icons.arrow_forward_rounded, color: Colors.white, size: 20),
+                                  ],
+                                ),
+                              ),
                             ),
                           ),
                         ),
@@ -162,33 +144,6 @@ class WelcomPage extends StatelessWidget {
     );
   }
 
-  Widget _buildHeader() {
-    return Column(
-      children: [
-        Text(
-          'M@LI-NTIC',
-          style: GoogleFonts.poppins(
-            fontSize: 32,
-            fontWeight: FontWeight.w900,
-            color: AppTheme.textPrimary,
-            letterSpacing: -0.5,
-          ),
-        ),
-        const SizedBox(height: 12),
-        Text(
-          'Plateforme intelligente de gestion de formations',
-          style: GoogleFonts.poppins(
-            fontSize: 15,
-            color: AppTheme.textSecondary,
-            fontWeight: FontWeight.w400,
-            height: 1.5,
-          ),
-          textAlign: TextAlign.center,
-        ),
-      ],
-    );
-  }
-
   // DESKTOP SERVICES LIST
   Widget _buildServicesListDesktop(BuildContext context) {
     final services = [
@@ -199,7 +154,7 @@ class WelcomPage extends StatelessWidget {
         'color': AppTheme.primary,
         'gradient': AppTheme.primaryGradient,
         'action': () {
-          Navigator.pushReplacement(
+          Navigator.push(
             context,
             MaterialPageRoute(builder: (context) => const SignInPage()),
           );
@@ -339,7 +294,7 @@ class WelcomPage extends StatelessWidget {
         'icon': Icons.school_rounded,
         'gradient': AppTheme.primaryGradient,
         'action': () {
-          Navigator.pushReplacement(
+          Navigator.push(
             context,
             MaterialPageRoute(builder: (context) => const SignInPage()),
           );
@@ -474,7 +429,7 @@ class WelcomPage extends StatelessWidget {
             color: Colors.transparent,
             child: InkWell(
               onTap: () {
-                Navigator.pushReplacement(
+                Navigator.push(
                   context,
                   MaterialPageRoute(builder: (context) => const SignInPage()),
                 );

@@ -181,7 +181,7 @@ class MiniPieChart extends StatelessWidget {
       return PieChartSectionData(
         value: value,
         color: colors[data.keys.toList().indexOf(entry.key) % colors.length],
-        radius: size / 2,
+        radius: size * 0.22,
         title: '',
       );
     }).toList();
@@ -191,8 +191,8 @@ class MiniPieChart extends StatelessWidget {
       width: size,
       child: PieChart(
         PieChartData(
-          sectionsSpace: 0,
-          centerSpaceRadius: size * 0.4,
+          sectionsSpace: 2,
+          centerSpaceRadius: size * 0.25,
           sections: sections,
         ),
       ),

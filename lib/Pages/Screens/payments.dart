@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:gestion_formations/Models/formation.dart';
 import 'package:gestion_formations/Models/payment.dart';
 import 'package:gestion_formations/Models/user.dart';
 import 'package:gestion_formations/Services/db_services.dart';
+import 'package:gestion_formations/Services/invoice_service.dart';
+import 'package:gestion_formations/Services/pdf_helper.dart';
 import 'package:gestion_formations/config/theme.dart';
 
 class PaymentsPage extends StatefulWidget {
@@ -16,63 +19,27 @@ class PaymentsPage extends StatefulWidget {
 
 class _PaymentsPageState extends State<PaymentsPage> with TickerProviderStateMixin {
   final LocalDataService _db = LocalDataService();
-  final TextEditingController _searchController = TextEditingController();
   late AnimationController _fadeController;
-  String _filterStatus = 'Tous';
-  String _sortBy = 'Date';
 
   @override
   void initState() {
     super.initState();
-    _fadeController = AnimationController(duration: Duration(milliseconds: 600), vsync: this)..forward();
+    _fadeController = AnimationController(duration: const Duration(milliseconds: 600), vsync: this)..forward();
   }
 
   @override
   void dispose() {
     _fadeController.dispose();
-    _searchController.dispose();
     super.dispose();
   }
 
-  bool get isAdmin => widget.user.role == UserRole.admin;
-
   @override
   Widget build(BuildContext context) {
-    if (!isAdmin) {
-      return _buildStudentPaymentView();
-    }
-
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final isMobile = constraints.maxWidth < 860;
-        return Center(
-          child: ConstrainedBox(
-            constraints: BoxConstraints(maxWidth: 1100),
-            child: SingleChildScrollView(
-              padding: EdgeInsets.symmetric(
-                horizontal: isMobile ? AppPadding.md : AppPadding.lg,
-                vertical: AppPadding.lg,
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildAdminHeader(context, isMobile),
-                  SizedBox(height: AppPadding.lg),
-                  _buildAdminToolbar(context, isMobile),
-                  SizedBox(height: AppPadding.lg),
-                  _buildPaymentsList(context, isMobile),
-                ],
-              ),
-            ),
-          ),
-        );
-      },
-    );
+    return _buildStudentPaymentView();
   }
 
   Widget _buildStudentPaymentView() {
-    return SingleChildScrollView(
-      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+    return _buildPageWrapper(
       child: FadeTransition(
         opacity: _fadeController,
         child: Column(
@@ -86,16 +53,16 @@ class _PaymentsPageState extends State<PaymentsPage> with TickerProviderStateMix
                 color: AppTheme.textPrimary,
               ),
             ),
-            SizedBox(height: 6),
+            const SizedBox(height: 6),
             Text(
-              'Suivi de vos transactions',
+              'Suivi de vos transactions et téléchargement des reçus',
               style: GoogleFonts.poppins(
                 fontSize: 13,
                 color: AppTheme.textSecondary,
                 fontWeight: FontWeight.w500,
               ),
             ),
-            SizedBox(height: 24),
+            const SizedBox(height: 24),
             _buildStudentPaymentsList(),
           ],
         ),
@@ -103,430 +70,41 @@ class _PaymentsPageState extends State<PaymentsPage> with TickerProviderStateMix
     );
   }
 
-  Widget _buildAdminHeader(BuildContext context, bool isMobile) {
-    return FadeTransition(
-      opacity: _fadeController,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Paiements',
-            style: GoogleFonts.poppins(
-              fontSize: 32,
-              fontWeight: FontWeight.w800,
-              color: AppTheme.textPrimary,
-            ),
-          ),
-          SizedBox(height: 6),
-          Text(
-            'Gérez l\'ensemble des paiements des formations',
-            style: GoogleFonts.poppins(
-              fontSize: 13,
-              color: AppTheme.textSecondary,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 
-  Widget _buildAdminToolbar(BuildContext context, bool isMobile) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 10,
-            offset: Offset(0, 2),
-          ),
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.02),
-            blurRadius: 20,
-            offset: Offset(0, 8),
-          ),
-        ],
-      ),
-      child: Padding(
-        padding: EdgeInsets.all(AppPadding.lg),
-        child: isMobile
-            ? Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  _buildSearchField(),
-                  SizedBox(height: AppPadding.md),
-                  _buildToolbarControls(),
-                ],
-              )
-            : Row(
-                children: [
-                  Expanded(child: _buildSearchField()),
-                  SizedBox(width: AppPadding.lg),
-                  _buildToolbarControls(),
-                ],
-              ),
-      ),
-    );
-  }
+  Widget _buildPageWrapper({
+    required Widget child,
+    EdgeInsetsGeometry? padding,
+    double? fixedWidth,
+  }) {
+    final width = MediaQuery.of(context).size.width;
+    final maxWidth = fixedWidth ?? (width > 1200 ? 1100.0 : width * 0.95);
 
-  Widget _buildSearchField() {
-    return TextField(
-      controller: _searchController,
-      decoration: InputDecoration(
-        prefixIcon: Icon(Icons.search_rounded, color: AppTheme.textSecondary),
-        hintText: 'Rechercher un paiement...',
-        hintStyle: GoogleFonts.poppins(
-          color: AppTheme.textSecondary,
-          fontWeight: FontWeight.w500,
-        ),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Colors.grey.shade200),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Colors.grey.shade200),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: AppTheme.primary, width: 2),
-        ),
-        filled: true,
-        fillColor: Colors.white,
-        contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      ),
-      style: GoogleFonts.poppins(
-        color: AppTheme.textPrimary,
-        fontWeight: FontWeight.w500,
-      ),
-      onChanged: (_) => setState(() {}),
-    );
-  }
-
-  Widget _buildToolbarControls() {
-    return Wrap(
-      spacing: AppPadding.md,
-      runSpacing: AppPadding.md,
-      alignment: WrapAlignment.end,
-      children: [
-        Container(
-          padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            border: Border.all(color: Colors.grey.shade200),
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: DropdownButton<String>(
-            value: _filterStatus,
-            items: ['Tous', 'En attente', 'Effectué', 'Échoué']
-                .map((value) => DropdownMenuItem(
-                      value: value,
-                      child: Text(
-                        value,
-                        style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
-                      ),
-                    ))
-                .toList(),
-            onChanged: (value) {
-              if (value != null) setState(() => _filterStatus = value);
-            },
-            underline: SizedBox(),
-            icon: Icon(Icons.filter_list_rounded, color: AppTheme.primary),
-          ),
-        ),
-        Container(
-          padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            border: Border.all(color: Colors.grey.shade200),
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: DropdownButton<String>(
-            value: _sortBy,
-            items: ['Date', 'Montant', 'Statut']
-                .map((value) => DropdownMenuItem(
-                      value: value,
-                      child: Text(
-                        value,
-                        style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
-                      ),
-                    ))
-                .toList(),
-            onChanged: (value) {
-              if (value != null) setState(() => _sortBy = value);
-            },
-            underline: SizedBox(),
-            icon: Icon(Icons.sort_rounded, color: AppTheme.primary),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildPaymentsList(BuildContext context, bool isMobile) {
-    return StreamBuilder<List<Payment>>(
-      stream: _db.watchPayments(),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return Center(child: CircularProgressIndicator());
-        }
-
-        final payments = snapshot.data ?? [];
-
-        var filtered = payments.where((payment) {
-          if (_filterStatus != 'Tous') {
-            final statusMap = {
-              'En attente': PaymentStatus.enAttente,
-              'Effectué': PaymentStatus.effectue,
-              'Échoué': PaymentStatus.echoue,
-            };
-            if (payment.status != statusMap[_filterStatus]) return false;
-          }
-
-          final query = _searchController.text.trim().toLowerCase();
-          if (query.isEmpty) return true;
-          return payment.etudiantId.toLowerCase().contains(query) ||
-              payment.montant.toString().contains(query);
-        }).toList();
-
-        _sortPayments(filtered);
-
-        if (filtered.isEmpty) {
-          return Container(
+    return Center(
+      child: ConstrainedBox(
+        constraints: BoxConstraints(maxWidth: maxWidth),
+        child: SingleChildScrollView(
+          padding: padding ?? const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+          child: Container(
             decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.05),
-                  blurRadius: 10,
-                  offset: Offset(0, 2),
-                ),
-              ],
+              color: AppTheme.surface,
+              borderRadius: BorderRadius.circular(24),
+              boxShadow: AppTheme.cardShadow,
             ),
-            padding: EdgeInsets.all(AppPadding.lg),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  Icons.receipt_long_rounded,
-                  size: 64,
-                  color: AppTheme.textSecondary,
-                ),
-                SizedBox(height: AppPadding.lg),
-                Text(
-                  'Aucun paiement',
-                  style: GoogleFonts.poppins(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                    color: AppTheme.textPrimary,
-                  ),
-                ),
-              ],
-            ),
-          );
-        }
-
-        final cardWidth = isMobile ? double.infinity : 520.0;
-
-        return Wrap(
-          spacing: AppPadding.lg,
-          runSpacing: AppPadding.lg,
-          children: filtered.map((payment) {
-            return SizedBox(
-              width: cardWidth,
-              child: _buildPaymentCard(context, payment),
-            );
-          }).toList(),
-        );
-      },
-    );
-  }
-
-  Widget _buildPaymentCard(BuildContext context, Payment payment) {
-    final statusColor = _getStatusColor(payment.status);
-    final statusLabel = _getStatusLabel(payment.status);
-
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 10,
-            offset: Offset(0, 2),
-          ),
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.02),
-            blurRadius: 20,
-            offset: Offset(0, 8),
-          ),
-        ],
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(16),
-          onTap: () => _showPaymentDetails(payment),
-          child: Padding(
-            padding: EdgeInsets.all(AppPadding.lg),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Builder(
-                            builder: (context) {
-                              final student = _db.getUserById(payment.etudiantId);
-                              final studentName = student?.prenom ?? 'Étudiant';
-                              return Text(
-                                studentName,
-                                style: GoogleFonts.poppins(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w700,
-                                  color: AppTheme.textPrimary,
-                                ),
-                              );
-                            },
-                          ),
-                          SizedBox(height: 4),
-                          Text(
-                            'Ref: ${payment.id.substring(0, 8)}',
-                            style: GoogleFonts.poppins(
-                              fontSize: 12,
-                              color: AppTheme.textSecondary,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Container(
-                      padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: statusColor.withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        statusLabel,
-                        style: GoogleFonts.poppins(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w700,
-                          color: statusColor,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                SizedBox(height: AppPadding.lg),
-                Container(
-                  padding: EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: AppTheme.primary.withValues(alpha: 0.08),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: AppTheme.primary.withValues(alpha: 0.2)),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'Montant',
-                        style: GoogleFonts.poppins(
-                          fontSize: 12,
-                          color: AppTheme.textSecondary,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      Text(
-                        '${payment.montant.toStringAsFixed(2)} €',
-                        style: GoogleFonts.poppins(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w800,
-                          color: AppTheme.primary,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                SizedBox(height: AppPadding.md),
-                Row(
-                  children: [
-                    Expanded(
-                      child: _buildInfoRow(
-                        'Méthode',
-                        _getMethodLabel(payment.methode),
-                      ),
-                    ),
-                    SizedBox(width: AppPadding.md),
-                    Expanded(
-                      child: _buildInfoRow(
-                        'Date',
-                        '${payment.dateCreation.day}/${payment.dateCreation.month}/${payment.dateCreation.year}',
-                      ),
-                    ),
-                  ],
-                ),
-                if (payment.status == PaymentStatus.effectue && payment.dateEffectuation != null) ...[
-                  SizedBox(height: AppPadding.md),
-                  _buildInfoRow(
-                    'Effectué le',
-                    '${payment.dateEffectuation!.day}/${payment.dateEffectuation!.month}/${payment.dateEffectuation!.year}',
-                  ),
-                ],
-                if (payment.status == PaymentStatus.echoue && payment.motifEchec != null) ...[
-                  SizedBox(height: AppPadding.md),
-                  _buildInfoRow(
-                    'Motif',
-                    payment.motifEchec!,
-                  ),
-                ],
-              ],
-            ),
+            padding: const EdgeInsets.all(20),
+            child: child,
           ),
         ),
       ),
     );
   }
 
-  Widget _buildInfoRow(String label, String value) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: GoogleFonts.poppins(
-            fontSize: 11,
-            color: AppTheme.textSecondary,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        SizedBox(height: 4),
-        Text(
-          value,
-          style: GoogleFonts.poppins(
-            fontSize: 13,
-            color: AppTheme.textPrimary,
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-      ],
-    );
-  }
 
   Widget _buildStudentPaymentsList() {
     return StreamBuilder<List<Payment>>(
       stream: _db.watchPayments(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return Center(child: CircularProgressIndicator());
+          return const Center(child: CircularProgressIndicator());
         }
 
         final allPayments = snapshot.data ?? [];
@@ -538,12 +116,12 @@ class _PaymentsPageState extends State<PaymentsPage> with TickerProviderStateMix
               color: AppTheme.primary.withValues(alpha: 0.05),
               borderRadius: BorderRadius.circular(16),
             ),
-            padding: EdgeInsets.symmetric(vertical: 40, horizontal: 20),
+            padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 20),
             child: Center(
               child: Column(
                 children: [
-                  Icon(Icons.receipt_long_rounded, size: 56, color: AppTheme.textSecondary),
-                  SizedBox(height: 14),
+                  const Icon(Icons.receipt_long_rounded, size: 56, color: AppTheme.textSecondary),
+                  const SizedBox(height: 14),
                   Text(
                     'Aucun paiement enregistré',
                     style: GoogleFonts.poppins(
@@ -561,10 +139,10 @@ class _PaymentsPageState extends State<PaymentsPage> with TickerProviderStateMix
         return ListView.builder(
           itemCount: payments.length,
           shrinkWrap: true,
-          physics: NeverScrollableScrollPhysics(),
+          physics: const NeverScrollableScrollPhysics(),
           itemBuilder: (context, index) {
             return Padding(
-              padding: EdgeInsets.only(bottom: 12),
+              padding: const EdgeInsets.only(bottom: 12),
               child: TweenAnimationBuilder(
                 tween: Tween<double>(begin: 0, end: 1),
                 duration: Duration(milliseconds: 400 + (index * 60)),
@@ -593,13 +171,8 @@ class _PaymentsPageState extends State<PaymentsPage> with TickerProviderStateMix
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 10,
-            offset: Offset(0, 2),
-          ),
-        ],
+        border: Border.all(color: const Color(0xFFF1F5F9), width: 1.2),
+        boxShadow: AppTheme.cardShadow,
       ),
       child: Material(
         color: Colors.transparent,
@@ -607,7 +180,7 @@ class _PaymentsPageState extends State<PaymentsPage> with TickerProviderStateMix
           borderRadius: BorderRadius.circular(16),
           onTap: () => _showPaymentDetails(payment),
           child: Padding(
-            padding: EdgeInsets.all(14),
+            padding: const EdgeInsets.all(16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -615,7 +188,7 @@ class _PaymentsPageState extends State<PaymentsPage> with TickerProviderStateMix
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      '${payment.montant.toStringAsFixed(2)} €',
+                      '${payment.montant.toStringAsFixed(0)} FCFA',
                       style: GoogleFonts.poppins(
                         fontSize: 18,
                         fontWeight: FontWeight.w800,
@@ -623,7 +196,7 @@ class _PaymentsPageState extends State<PaymentsPage> with TickerProviderStateMix
                       ),
                     ),
                     Container(
-                      padding: EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                       decoration: BoxDecoration(
                         color: statusColor.withValues(alpha: 0.15),
                         borderRadius: BorderRadius.circular(8),
@@ -639,23 +212,43 @@ class _PaymentsPageState extends State<PaymentsPage> with TickerProviderStateMix
                     ),
                   ],
                 ),
-                SizedBox(height: 10),
+                const SizedBox(height: 10),
                 Text(
-                  'Méthode: ${_getMethodLabel(payment.methode)}',
+                  'Méthode : ${_getMethodLabel(payment.methode)}',
                   style: GoogleFonts.poppins(
                     fontSize: 12,
                     color: AppTheme.textSecondary,
                     fontWeight: FontWeight.w500,
                   ),
                 ),
-                SizedBox(height: 6),
-                Text(
-                  '${payment.dateCreation.day}/${payment.dateCreation.month}/${payment.dateCreation.year}',
-                  style: GoogleFonts.poppins(
-                    fontSize: 11,
-                    color: AppTheme.textSecondary,
-                    fontWeight: FontWeight.w500,
-                  ),
+                const SizedBox(height: 6),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      '${payment.dateCreation.day}/${payment.dateCreation.month}/${payment.dateCreation.year}',
+                      style: GoogleFonts.poppins(
+                        fontSize: 11,
+                        color: AppTheme.textSecondary,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    ElevatedButton.icon(
+                      onPressed: () => _downloadReceipt(payment),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppTheme.primary,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        elevation: 0,
+                      ),
+                      icon: const Icon(Icons.picture_as_pdf_rounded, size: 16),
+                      label: Text(
+                        'Reçu PDF',
+                        style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w700),
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -671,7 +264,7 @@ class _PaymentsPageState extends State<PaymentsPage> with TickerProviderStateMix
     await showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: Text(
           'Détails du paiement',
           style: GoogleFonts.poppins(
@@ -685,20 +278,28 @@ class _PaymentsPageState extends State<PaymentsPage> with TickerProviderStateMix
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              _buildDetailSection('Montant', '${payment.montant.toStringAsFixed(2)} €', AppTheme.primary),
+              _buildDetailSection('Montant', '${payment.montant.toStringAsFixed(0)} FCFA', AppTheme.primary),
               _buildDetailSection('Statut', _getStatusLabel(payment.status), _getStatusColor(payment.status)),
               _buildDetailSection('Méthode', _getMethodLabel(payment.methode), AppTheme.primaryDark),
               _buildDetailSection('Date création', '${payment.dateCreation.day}/${payment.dateCreation.month}/${payment.dateCreation.year}', AppTheme.primary),
               if (payment.dateEffectuation != null)
-                _buildDetailSection('Date effectuation', '${payment.dateEffectuation!.day}/${payment.dateEffectuation!.month}/${payment.dateEffectuation!.year}', Color(0xFF10B981)),
+                _buildDetailSection('Date effectuation', '${payment.dateEffectuation!.day}/${payment.dateEffectuation!.month}/${payment.dateEffectuation!.year}', const Color(0xFF10B981)),
               if (payment.referenceTransaction != null)
                 _buildDetailSection('Référence', payment.referenceTransaction!, AppTheme.primary),
               if (payment.motifEchec != null)
-                _buildDetailSection('Motif échec', payment.motifEchec!, Color(0xFFEF4444)),
+                _buildDetailSection('Motif échec', payment.motifEchec!, const Color(0xFFEF4444)),
             ],
           ),
         ),
         actions: [
+          OutlinedButton.icon(
+            onPressed: () {
+              Navigator.of(context).pop();
+              _downloadReceipt(payment);
+            },
+            icon: const Icon(Icons.download_rounded, size: 16),
+            label: const Text('Télécharger Reçu'),
+          ),
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
             child: Text(
@@ -712,6 +313,70 @@ class _PaymentsPageState extends State<PaymentsPage> with TickerProviderStateMix
         ],
       ),
     );
+  }
+
+  Future<void> _downloadReceipt(Payment payment) async {
+    try {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('📄 Génération du reçu PDF en cours...'),
+          duration: Duration(seconds: 2),
+        ),
+      );
+
+      final inscription = _db.getInscriptions().where((i) => i.id == payment.inscriptionId).firstOrNull;
+      final formation = inscription != null ? _db.getFormationById(inscription.formationId) : null;
+      final formationTitle = formation?.titre ?? 'Formation M@LI-NTIC';
+      final modules = inscription?.modules ?? [];
+
+      final totalPaiements = _db.getPayments()
+          .where((p) => p.inscriptionId == payment.inscriptionId && p.status == PaymentStatus.effectue)
+          .fold<double>(0, (sum, p) => sum + p.montant);
+
+      final montantTotal = formation != null ? (formation.type == FormationType.enligne ? formation.prixEnLigne ?? formation.prix : formation.prix) : payment.montant;
+      final montantRestant = (montantTotal - totalPaiements) > 0 ? (montantTotal - totalPaiements) : 0.0;
+
+      final pdfBytes = await InvoiceService.generateInvoicePDF(
+        studentName: '${widget.user.prenom} ${widget.user.nom}',
+        email: widget.user.email,
+        phone: widget.user.phone,
+        formationTitle: formationTitle,
+        modules: modules,
+        montantTotal: montantTotal,
+        montantPaye: payment.montant,
+        montantRestant: montantRestant,
+        statut: _getStatusLabel(payment.status),
+        paymentHistory: [
+          {
+            'trancheNumero': payment.trancheNumero,
+            'nombreTranches': payment.nombreTranches,
+            'montant': payment.montant,
+            'date': payment.dateCreation.toIso8601String(),
+            'methode': _getMethodLabel(payment.methode),
+            'statut': _getStatusLabel(payment.status),
+          }
+        ],
+      );
+
+      final fileName = 'Recu_Paiement_${payment.id}';
+      await PdfHelper.downloadPDF(pdfBytes, fileName: fileName);
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('✅ Reçu PDF téléchargé avec succès !'),
+          backgroundColor: AppTheme.success,
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('❌ Erreur de génération du PDF: $e'),
+          backgroundColor: AppTheme.error,
+        ),
+      );
+    }
   }
 
   Widget _buildDetailSection(String label, String value, Color color) {
@@ -750,15 +415,6 @@ class _PaymentsPageState extends State<PaymentsPage> with TickerProviderStateMix
     );
   }
 
-  void _sortPayments(List<Payment> payments) {
-    if (_sortBy == 'Montant') {
-      payments.sort((a, b) => b.montant.compareTo(a.montant));
-    } else if (_sortBy == 'Statut') {
-      payments.sort((a, b) => a.status.toString().compareTo(b.status.toString()));
-    } else {
-      payments.sort((a, b) => b.dateCreation.compareTo(a.dateCreation));
-    }
-  }
 
   Color _getStatusColor(PaymentStatus status) {
     switch (status) {
@@ -789,7 +445,11 @@ class _PaymentsPageState extends State<PaymentsPage> with TickerProviderStateMix
       case PaymentMethod.especes:
         return 'Espèces';
       case PaymentMethod.carte:
-      return 'Carte bancaire';
+        return 'Carte bancaire';
+      case PaymentMethod.orangeMoney:
+        return 'Orange Money';
+      case PaymentMethod.moovMoney:
+        return 'Moov Money';
     }
   }
 }

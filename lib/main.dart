@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:gestion_formations/config/theme.dart';
 import 'package:gestion_formations/Models/user.dart';
 import 'package:gestion_formations/Pages/Login/welcom_page.dart';
@@ -7,23 +8,22 @@ import 'package:gestion_formations/Pages/home_screen.dart';
 import 'package:gestion_formations/Services/auth_provider.dart';
 import 'package:gestion_formations/Services/db_services.dart';
 import 'package:gestion_formations/Services/local_storage.dart';
-import 'package:gestion_formations/Models/payment.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
-  // Import any pending local inscriptions created by the static public page.
-  try {
-    await _importLocalInscriptionQueue();
-    await _importFromApi();
-  } catch (e) {
-    // ignore import errors
-  }
-
-  // Firebase initialization removed (migrating away from Firebase).
   runApp(const MyApp());
+
+  // Import queues asynchronously in background after first paint
+  Future.microtask(() async {
+    try {
+      await _importLocalInscriptionQueue();
+      await _importFromApi();
+    } catch (e) {
+      debugPrint('Import queue error: $e');
+    }
+  });
 }
 
 Future<void> _importLocalInscriptionQueue() async {
@@ -48,13 +48,11 @@ Future<void> _importLocalInscriptionQueue() async {
         final modules = (map['modules'] as List<dynamic>?)?.map((e) => e.toString()).toList();
         final description = map['description']?.toString();
         final typeFormation = map['typeFormation']?.toString();
-
-        // Create inscription in local in-memory DB. Use default payment values.
+        // Import administrative enrolments only. Payments are recorded from
+        // the dedicated Payments module when money is actually received.
         await db.createInscription(
           etudiantId: etudiantId,
           formationId: formationId,
-          montant: 0.0,
-          methode: PaymentMethod.especes,
           prenom: prenom,
           nom: nom,
           email: email,
@@ -77,9 +75,12 @@ Future<void> _importLocalInscriptionQueue() async {
 
 Future<void> _importFromApi() async {
   try {
+    if (!kIsWeb) return;
     final db = LocalDataService();
     // Use current page origin to call the API through nginx proxy
+    if (!Uri.base.hasAuthority) return;
     final origin = Uri.base.origin;
+    if (origin.isEmpty || !origin.startsWith('http')) return;
     final response = await http.get(
       Uri.parse('$origin/api/inscriptions'),
       headers: {'Accept': 'application/json'},
@@ -100,12 +101,9 @@ Future<void> _importFromApi() async {
         final modules = (map['modules'] as List<dynamic>?)?.map((e) => e.toString()).toList();
         final description = map['description']?.toString();
         final typeFormation = map['typeFormation']?.toString();
-
         await db.createInscription(
           etudiantId: etudiantId,
           formationId: formationId,
-          montant: 0.0,
-          methode: PaymentMethod.especes,
           prenom: prenom,
           nom: nom,
           email: email,
@@ -129,7 +127,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Gestion-Formations',
+      title: 'Malintic',
       theme: AppTheme.lightTheme,
       debugShowCheckedModeBanner: false,
       home: const AuthWrapper(),
@@ -145,20 +143,16 @@ class AuthWrapper extends StatefulWidget {
 }
 
 class _AuthWrapperState extends State<AuthWrapper> {
-  bool _inscriptionScheduled = false;
   @override
   Widget build(BuildContext context) {
     final uri = Uri.base;
-    // Primary: check standard query parameters
-    String? preselectedFormationId = uri.queryParameters['formationId'];
+    String? preselectedFormationId =
+        uri.queryParameters['formationId'] ?? uri.queryParameters['id'];
     bool showInscriptionPage = uri.queryParameters['inscription'] == 'true';
 
-    // Fallback: some share links may use hash routing (/#/inscription?formationId=...)
-    // In that case the fragment contains the route and its query params.
     if (!showInscriptionPage) {
-      final frag = uri.fragment; // e.g. "/inscription?formationId=..." or "inscription?formationId=..."
+      final frag = uri.fragment;
       if (frag.isNotEmpty && frag.contains('inscription')) {
-        // Try to extract query params from fragment
         try {
           final fragPart = frag.contains('?') ? frag.split('?').last : '';
           final fragParams = Uri.splitQueryString(fragPart.isNotEmpty ? fragPart : '');
@@ -166,7 +160,8 @@ class _AuthWrapperState extends State<AuthWrapper> {
             showInscriptionPage = true;
           }
           if (preselectedFormationId == null || preselectedFormationId.isEmpty) {
-            preselectedFormationId = fragParams['formationId'];
+            preselectedFormationId =
+                fragParams['formationId'] ?? fragParams['id'];
           }
         } catch (e) {
           // ignore parsing errors and continue
@@ -176,34 +171,22 @@ class _AuthWrapperState extends State<AuthWrapper> {
 
     return StreamBuilder<User?>(
       stream: AuthProvider().watchCurrentUser(),
+      initialData: AuthProvider().currentUser,
       builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
+        final activeUser = snapshot.data ?? AuthProvider().currentUser;
+        if (activeUser != null) {
+          return HomeScreen(user: activeUser);
+        }
+
+        if (showInscriptionPage) {
+          return InscriptionPage(formationId: preselectedFormationId);
+        }
+
+        if (snapshot.connectionState == ConnectionState.waiting &&
+            snapshot.data == null) {
           return const Scaffold(
-            body: Center(child: CircularProgressIndicator()),
+            body: Center(child: CircularProgressIndicator(color: AppTheme.primary)),
           );
-        }
-
-        // If share link requests inscription, schedule navigation after first frame
-        if (showInscriptionPage && !_inscriptionScheduled) {
-          _inscriptionScheduled = true;
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            try {
-              Navigator.of(context).push(MaterialPageRoute(
-                builder: (_) => InscriptionPage(formationId: preselectedFormationId),
-              ));
-            } catch (e) {
-              // ignore navigator errors during early builds
-            }
-          });
-        }
-
-        if (snapshot.connectionState == ConnectionState.active) {
-          final currentUser = snapshot.data;
-          if (currentUser != null) {
-            return HomeScreen(user: currentUser);
-          }
-
-          return const WelcomPage();
         }
 
         return const WelcomPage();

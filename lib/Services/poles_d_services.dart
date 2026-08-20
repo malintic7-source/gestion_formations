@@ -14,7 +14,7 @@ Widget poleDialog(BuildContext context, String title, String message) {
           icon: Icon(Icons.call),
           label: Text('Appeler'),
           onPressed: () async {
-            await launchUrl(Uri.parse('https://callto:+22392753558'));
+            await launchUrl(Uri.parse('tel:+22392753558'));
           },
         ),
         TextButton.icon(

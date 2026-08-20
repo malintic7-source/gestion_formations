@@ -4,7 +4,7 @@ enum InscriptionStatus { enAttente, acceptee, rejetee }
 
 class Inscription {
   final String id;
-  final String etudiantId;
+  final String apprenantId;
   final String formationId;
   final InscriptionStatus status;
   final DateTime dateInscription;
@@ -19,10 +19,14 @@ class Inscription {
   final String? description;
   final List<String>? modules;
   final String? typeFormation;
+  final String? sexe;
+
+  String get etudiantId => apprenantId;
 
   Inscription({
     required this.id,
-    required this.etudiantId,
+    String? apprenantId,
+    String? etudiantId,
     required this.formationId,
     required this.status,
     required this.dateInscription,
@@ -37,14 +41,15 @@ class Inscription {
     this.description,
     this.modules,
     this.typeFormation,
-  });
+    this.sexe,
+  }) : apprenantId = apprenantId ?? etudiantId ?? '';
 
   factory Inscription.fromMap(Map<String, dynamic> data, String id) {
     InscriptionStatus parseStatus(String statusStr) {
-      if (statusStr.contains('acceptee')) {
+      if (statusStr.contains('acceptee') || statusStr.contains('accepte') || statusStr.contains('valide')) {
         return InscriptionStatus.acceptee;
       }
-      if (statusStr.contains('rejetee')) {
+      if (statusStr.contains('rejetee') || statusStr.contains('rejete')) {
         return InscriptionStatus.rejetee;
       }
       return InscriptionStatus.enAttente;
@@ -52,13 +57,18 @@ class Inscription {
 
     DateTime parseDate(dynamic val) {
       if (val is DateTime) return val;
+      if (val != null && val.runtimeType.toString().contains('Timestamp')) {
+        try {
+          return (val as dynamic).toDate();
+        } catch (_) {}
+      }
       if (val is String) return DateTime.tryParse(val) ?? DateTime.now();
       return DateTime.now();
     }
 
     return Inscription(
       id: id,
-      etudiantId: data['etudiantId'] ?? '',
+      apprenantId: data['apprenantId'] ?? data['etudiantId'] ?? '',
       formationId: data['formationId'] ?? '',
       status: parseStatus(data['status']?.toString() ?? 'InscriptionStatus.enAttente'),
       dateInscription: parseDate(data['dateInscription']),
@@ -73,6 +83,7 @@ class Inscription {
       description: data['description']?.toString(),
       modules: data['modules'] is List ? List<String>.from(data['modules']) : null,
       typeFormation: data['typeFormation']?.toString(),
+      sexe: data['sexe']?.toString(),
     );
   }
 
@@ -87,7 +98,8 @@ class Inscription {
   Map<String, dynamic> toMap() {
     return {
       'id': id,
-      'etudiantId': etudiantId,
+      'apprenantId': apprenantId,
+      'etudiantId': apprenantId,
       'formationId': formationId,
       'status': status.toString(),
       'dateInscription': dateInscription.toIso8601String(),
@@ -102,6 +114,7 @@ class Inscription {
       'description': description,
       'modules': modules,
       'typeFormation': typeFormation,
+      'sexe': sexe,
     };
   }
 

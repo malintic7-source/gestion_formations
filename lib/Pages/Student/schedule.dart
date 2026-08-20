@@ -34,17 +34,32 @@ class _StudentScheduleState extends State<StudentSchedule> with TickerProviderSt
 
   @override
   Widget build(BuildContext context) {
-    final isMobile = MediaQuery.of(context).size.width < 768;
+    final isMobile = MediaQuery.of(context).size.width < 600;
+    final width = MediaQuery.of(context).size.width;
+    final maxWidth = width > 1200 ? 1100.0 : width * 0.95;
 
-    return SingleChildScrollView(
-      padding: EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _buildHeader(isMobile),
-          SizedBox(height: 28),
-          _buildScheduleCalendar(),
-        ],
+    return Center(
+      child: ConstrainedBox(
+        constraints: BoxConstraints(maxWidth: maxWidth),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+          child: Container(
+            decoration: BoxDecoration(
+              color: AppTheme.surface,
+              borderRadius: BorderRadius.circular(24),
+              boxShadow: AppTheme.cardShadow,
+            ),
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildHeader(isMobile),
+                const SizedBox(height: 28),
+                _buildScheduleCalendar(),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -189,6 +204,9 @@ class _StudentScheduleState extends State<StudentSchedule> with TickerProviderSt
               final modules = schedule['modules'] as List<dynamic>? ?? [];
               final debut = schedule['heureDebut'] ?? '';
               final fin = schedule['heureFin'] ?? '';
+              final group = schedule['groupe']?.toString();
+              final modality = schedule['modalite']?.toString();
+              final place = schedule['lieuOuLien']?.toString();
 
               return Padding(
                 padding: EdgeInsets.only(bottom: 10),
@@ -236,6 +254,13 @@ class _StudentScheduleState extends State<StudentSchedule> with TickerProviderSt
                           fontWeight: FontWeight.w400,
                         ),
                       ),
+                      if (group?.isNotEmpty == true || modality?.isNotEmpty == true || place?.isNotEmpty == true) ...[
+                        const SizedBox(height: 6),
+                        Text(
+                          [if (group?.isNotEmpty == true) 'Groupe : $group', if (modality?.isNotEmpty == true) modality!, if (place?.isNotEmpty == true) place!].join(' • '),
+                          style: GoogleFonts.poppins(fontSize: 10, color: AppTheme.textSecondary),
+                        ),
+                      ],
                       if (modules.isNotEmpty) ...[
                         SizedBox(height: 8),
                         Wrap(
@@ -275,19 +300,61 @@ class _StudentScheduleState extends State<StudentSchedule> with TickerProviderSt
     Map<String, List<Map<String, dynamic>>> scheduleByDay = {};
 
     for (var f in formations) {
+      final assignment = widget.user.assignedFormations.cast<Map<String, dynamic>?>().firstWhere(
+        (item) => item?['formationId'] == f.id,
+        orElse: () => null,
+      );
+      if (assignment == null) continue;
+      final selectedModules = (assignment['modules'] as List? ?? [])
+          .map((item) => item is Map ? item['title']?.toString() : item.toString())
+          .whereType<String>()
+          .toSet();
       for (var h in f.horaires) {
+        if (h.module?.isNotEmpty == true && !selectedModules.contains(h.module)) continue;
         if (!scheduleByDay.containsKey(h.jour)) {
           scheduleByDay[h.jour] = [];
         }
         scheduleByDay[h.jour]!.add({
-          'formateur': 'Ousmane Traoré',
+          'formateur': 'Formateur Référent',
           'formation': f.titre,
-          'modules': f.modules,
+          'modules': h.module?.isNotEmpty == true ? [h.module] : selectedModules.toList(),
           'heureDebut': h.heureDebut,
           'heureFin': h.heureFin,
+          'groupe': h.groupe,
+          'modalite': h.modalite,
+          'lieuOuLien': h.lieuOuLien,
+          'statut': 'Publié',
         });
       }
     }
+
+    // Merge published Seance records
+    final publishedSeances = _db.getSeances().where((s) => s.estPubliee).toList();
+    final studentAssignedIds = widget.user.assignedFormations
+        .map((f) => f['formationId']?.toString() ?? '')
+        .toSet();
+
+    final dayNames = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'];
+
+    for (var s in publishedSeances) {
+      if (!studentAssignedIds.contains(s.formationId)) continue;
+      final dayName = dayNames[s.date.weekday - 1];
+      if (!scheduleByDay.containsKey(dayName)) {
+        scheduleByDay[dayName] = [];
+      }
+      scheduleByDay[dayName]!.add({
+        'formateur': s.formateurNom,
+        'formation': s.formationTitle,
+        'modules': s.moduleTitle != null ? [s.moduleTitle!] : [],
+        'heureDebut': s.heureDebut,
+        'heureFin': s.heureFin,
+        'groupe': null,
+        'modalite': s.modalite,
+        'lieuOuLien': s.salleOuLien,
+        'statut': 'Publié',
+      });
+    }
+
     return scheduleByDay;
   }
 }

@@ -10,12 +10,12 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:gestion_formations/Pages/Login/welcom_page.dart';
 
 void main() {
-  testWidgets('WelcomPage renders title and brand name', (WidgetTester tester) async {
+  testWidgets('WelcomPage renders logo and access button', (WidgetTester tester) async {
     // Build our app welcome page directly.
     await tester.pumpWidget(const MaterialApp(home: WelcomPage()));
     await tester.pumpAndSettle();
 
-    // Verify that M@LI-NTIC title is present on the welcome screen
-    expect(find.text('M@LI-NTIC'), findsWidgets);
+    expect(find.byType(Image), findsWidgets);
+    expect(find.text('Formations'), findsOneWidget);
   });
 }

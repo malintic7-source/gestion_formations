@@ -10,7 +10,7 @@
   <script>
     (function() {
       const params = new URLSearchParams(window.location.search);
-      const formationId = params.get('formationId') || '';
+      const formationId = params.get('formationId') || params.get('id') || '';
       const target = `/?inscription=true&formationId=${encodeURIComponent(formationId)}`;
       // Use replace so back button doesn't return to this redirect page
       window.location.replace(target);

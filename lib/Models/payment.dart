@@ -2,12 +2,12 @@
 
 enum PaymentStatus { enAttente, effectue, echoue }
 
-enum PaymentMethod { carte, virement, especes }
+enum PaymentMethod { carte, virement, especes, orangeMoney, moovMoney }
 
 class Payment {
   final String id;
   final String inscriptionId;
-  final String etudiantId;
+  final String apprenantId;
   final String formationId;
   final double montant;
   final PaymentStatus status;
@@ -17,11 +17,19 @@ class Payment {
   final String? referenceTransaction;
   final String? motifEchec;
   final String? motif;
+  final String? moduleId;
+  final int trancheNumero;
+  final int nombreTranches;
+  final double remise;
+  final DateTime? dateEcheance;
+
+  String get etudiantId => apprenantId;
 
   Payment({
     required this.id,
     required this.inscriptionId,
-    required this.etudiantId,
+    String? apprenantId,
+    String? etudiantId,
     required this.formationId,
     required this.montant,
     required this.status,
@@ -31,7 +39,12 @@ class Payment {
     this.referenceTransaction,
     this.motifEchec,
     this.motif,
-  });
+    this.moduleId,
+    this.trancheNumero = 1,
+    this.nombreTranches = 1,
+    this.remise = 0,
+    this.dateEcheance,
+  }) : apprenantId = apprenantId ?? etudiantId ?? '';
 
   factory Payment.fromMap(Map<String, dynamic> data, String id) {
     PaymentStatus parseStatus(String statusStr) {
@@ -45,10 +58,17 @@ class Payment {
     }
 
     PaymentMethod parseMethod(String methodStr) {
-      if (methodStr.contains('virement')) {
+      final normalized = methodStr.toLowerCase();
+      if (normalized.contains('orange')) {
+        return PaymentMethod.orangeMoney;
+      }
+      if (normalized.contains('moov')) {
+        return PaymentMethod.moovMoney;
+      }
+      if (normalized.contains('virement')) {
         return PaymentMethod.virement;
       }
-      if (methodStr.contains('especes')) {
+      if (normalized.contains('espece')) {
         return PaymentMethod.especes;
       }
       return PaymentMethod.carte;
@@ -57,6 +77,11 @@ class Payment {
     DateTime? parseDate(dynamic val) {
       if (val == null) return null;
       if (val is DateTime) return val;
+      if (val != null && val.runtimeType.toString().contains('Timestamp')) {
+        try {
+          return (val as dynamic).toDate();
+        } catch (_) {}
+      }
       if (val is String) return DateTime.tryParse(val);
       return null;
     }
@@ -64,7 +89,7 @@ class Payment {
     return Payment(
       id: id,
       inscriptionId: data['inscriptionId'] ?? '',
-      etudiantId: data['etudiantId'] ?? '',
+      apprenantId: data['apprenantId'] ?? data['etudiantId'] ?? '',
       formationId: data['formationId'] ?? '',
       montant: (data['montant'] ?? 0).toDouble(),
       status: parseStatus(data['status']?.toString() ?? 'PaymentStatus.enAttente'),
@@ -74,6 +99,11 @@ class Payment {
       referenceTransaction: data['referenceTransaction'],
       motifEchec: data['motifEchec'],
       motif: data['motif']?.toString(),
+      moduleId: data['moduleId']?.toString(),
+      trancheNumero: (data['trancheNumero'] as num?)?.toInt() ?? 1,
+      nombreTranches: (data['nombreTranches'] as num?)?.toInt() ?? 1,
+      remise: (data['remise'] as num?)?.toDouble() ?? 0,
+      dateEcheance: parseDate(data['dateEcheance']),
     );
   }
 
@@ -89,7 +119,8 @@ class Payment {
     return {
       'id': id,
       'inscriptionId': inscriptionId,
-      'etudiantId': etudiantId,
+      'apprenantId': apprenantId,
+      'etudiantId': apprenantId,
       'formationId': formationId,
       'montant': montant,
       'status': status.toString(),
@@ -99,6 +130,11 @@ class Payment {
       'referenceTransaction': referenceTransaction,
       'motifEchec': motifEchec,
       'motif': motif,
+      'moduleId': moduleId,
+      'trancheNumero': trancheNumero,
+      'nombreTranches': nombreTranches,
+      'remise': remise,
+      'dateEcheance': dateEcheance?.toIso8601String(),
     };
   }
 

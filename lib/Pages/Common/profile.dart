@@ -53,17 +53,25 @@ class _ProfilePageState extends State<ProfilePage> with TickerProviderStateMixin
       child: Center(
         child: ConstrainedBox(
           constraints: BoxConstraints(maxWidth: 960),
-          child: FadeTransition(
-            opacity: _fadeController,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                if (!isEditing) _buildProfileHeader(),
-                SizedBox(height: 28),
-                if (!isEditing) _buildProfileCard() else _buildEditCard(),
-                SizedBox(height: 28),
-                if (!isEditing) _buildSettingsSection(),
-              ],
+          child: Container(
+            decoration: BoxDecoration(
+              color: AppTheme.surface,
+              borderRadius: BorderRadius.circular(24),
+              boxShadow: AppTheme.cardShadow,
+            ),
+            padding: const EdgeInsets.all(20),
+            child: FadeTransition(
+              opacity: _fadeController,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (!isEditing) _buildProfileHeader(),
+                  const SizedBox(height: 28),
+                  if (!isEditing) _buildProfileCard() else _buildEditCard(),
+                  const SizedBox(height: 28),
+                  if (!isEditing) _buildSettingsSection(),
+                ],
+              ),
             ),
           ),
         ),

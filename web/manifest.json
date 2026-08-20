@@ -1,6 +1,6 @@
 {
-    "name": "Gestion Formations M@LINTIC",
-    "short_name": "M@LINTIC Formations",
+    "name": "Malintic",
+    "short_name": "Malintic",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#6366F1",

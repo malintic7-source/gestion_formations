@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:animate_do/animate_do.dart';
 import 'package:gestion_formations/config/theme.dart';
 import 'package:gestion_formations/Models/user.dart';
 import 'package:gestion_formations/Models/inscription.dart';
-import 'package:gestion_formations/Models/payment.dart';
+import 'package:gestion_formations/Models/formation.dart';
 import 'package:gestion_formations/Services/db_services.dart';
+import 'package:gestion_formations/Services/pdf_helper.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 
@@ -77,7 +79,7 @@ Map<String, dynamic> buildStudentUserDataFromInscription(
     'nom': nom,
     'prenom': prenom,
     'phone': phone,
-    'role': UserRole.etudiant.toString(),
+    'role': UserRole.apprenant.toString(),
     'estActif': true,
     'dateCreation': DateTime.now(),
     'dateModification': DateTime.now(),
@@ -104,8 +106,8 @@ class _AdminInscriptionsState extends State<AdminInscriptions> with TickerProvid
       vsync: this,
     )..forward();
 
-    // Import remote inscriptions from API (if available)
-    _importInscriptionsFromApi();
+    // Les imports ne sont jamais automatiques : ils pourraient recréer des
+    // dossiers historiques lors de l'ouverture ou du rafraîchissement.
   }
 
   @override
@@ -116,27 +118,26 @@ class _AdminInscriptionsState extends State<AdminInscriptions> with TickerProvid
 
   @override
   Widget build(BuildContext context) {
+    final width = MediaQuery.of(context).size.width;
+    final isMobile = width < 600;
+    final hp = isMobile ? 12.0 : 16.0;
+    final vp = isMobile ? 12.0 : 20.0;
+
     return SingleChildScrollView(
-      padding: EdgeInsets.all(16),
-      child: ConstrainedBox(
-        constraints: BoxConstraints(
-          minHeight: MediaQuery.of(context).size.height - 100,
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildHeader(),
-            SizedBox(height: 28),
-            _buildFilterButtons(),
-            SizedBox(height: 24),
-            _buildInscriptionsList(),
-          ],
-        ),
+      padding: EdgeInsets.symmetric(vertical: vp, horizontal: hp),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildHeader(),
+          SizedBox(height: isMobile ? 16 : 24),
+          _buildInscriptionsList(),
+        ],
       ),
     );
   }
 
   Widget _buildHeader() {
+    final isMobile = MediaQuery.of(context).size.width < 600;
     return FadeTransition(
       opacity: _fadeController,
       child: Container(
@@ -145,45 +146,98 @@ class _AdminInscriptionsState extends State<AdminInscriptions> with TickerProvid
           borderRadius: BorderRadius.circular(16),
           boxShadow: AppTheme.heroShadow,
         ),
-        padding: const EdgeInsets.all(20),
+        padding: EdgeInsets.all(isMobile ? 14 : 20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  child: Text(
-                    'Gestion des Inscriptions',
-                    style: GoogleFonts.poppins(
-                      fontSize: 28,
-                      fontWeight: FontWeight.w800,
-                      color: Colors.white,
-                    ),
-                  ),
-                ),
-                IconButton(
-                  onPressed: () async {
-                    final imported = await _importInscriptionsFromApi();
-                    if (!mounted) return;
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Importées: $imported')),
-                    );
-                  },
-                  icon: const Icon(Icons.refresh, color: Colors.white),
-                  tooltip: 'Rafraîchir les inscriptions',
-                ),
-              ],
+            Text(
+              'Gestion des Inscriptions',
+              style: GoogleFonts.poppins(
+                fontSize: isMobile ? 20 : 28,
+                fontWeight: FontWeight.w800,
+                color: Colors.white,
+              ),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 6),
             Text(
               'Validez, rejetez ou mettez en attente les inscriptions reçues',
               style: GoogleFonts.poppins(
-                fontSize: 14,
+                fontSize: isMobile ? 12 : 14,
                 color: Colors.white.withValues(alpha: 0.9),
                 fontWeight: FontWeight.w500,
               ),
+            ),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap: _showCreateInscriptionDialog,
+                      borderRadius: BorderRadius.circular(12),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.person_add_alt_1_rounded, color: Colors.white, size: 18),
+                            const SizedBox(width: 8),
+                            Text('Nouvelle', style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.w700)),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap: _exportInscriptionsCSV,
+                      borderRadius: BorderRadius.circular(12),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.file_download_rounded, color: Colors.white, size: 18),
+                            const SizedBox(width: 6),
+                            Text('Export CSV', style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.w700)),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: IconButton(
+                    onPressed: () async {
+                      final imported = await _importInscriptionsFromApi();
+                      if (!mounted) return;
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Importées: $imported'), backgroundColor: AppTheme.success),
+                      );
+                    },
+                    icon: const Icon(Icons.refresh, color: Colors.white),
+                    tooltip: 'Rafraîchir les inscriptions',
+                  ),
+                ),
+              ],
             ),
           ],
         ),
@@ -191,22 +245,248 @@ class _AdminInscriptionsState extends State<AdminInscriptions> with TickerProvid
     );
   }
 
-  Widget _buildFilterButtons() {
+  Future<void> _exportInscriptionsCSV() async {
+    final inscriptions = _db.getInscriptions();
+    if (inscriptions.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Aucune inscription à exporter')),
+      );
+      return;
+    }
+
+    final StringBuffer csv = StringBuffer();
+    csv.write('\uFEFF');
+    csv.writeln('ID;Prénom;Nom;Email;Téléphone;Formation;Statut;Paiement Effectué;Date Inscription');
+
+    for (final ins in inscriptions) {
+      final student = _db.getUsers().where((u) => u.id == ins.etudiantId).firstOrNull;
+      final formation = _db.getFormationById(ins.formationId);
+
+      final prenom = student?.prenom ?? ins.prenom ?? '';
+      final nom = student?.nom ?? ins.nom ?? '';
+      final email = student?.email ?? ins.email ?? '';
+      final tel = student?.phone ?? ins.telephone ?? '';
+      final formationTitre = formation?.titre ?? 'Formation';
+      final statusStr = _getStatusLabel(ins.status.name);
+      final payeStr = ins.paiementEffectue ? 'Oui' : 'Non';
+      final dateStr = '${ins.dateInscription.day}/${ins.dateInscription.month}/${ins.dateInscription.year}';
+
+      csv.writeln('"${ins.id}";"$prenom";"$nom";"$email";"$tel";"$formationTitre";"$statusStr";"$payeStr";"$dateStr"');
+    }
+
+    final Uint8List bytes = Uint8List.fromList(utf8.encode(csv.toString()));
+    await PdfHelper.downloadCSV(bytes, fileName: 'Liste_Inscriptions_${DateTime.now().millisecondsSinceEpoch}');
+
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('✅ Liste des inscriptions exportée en CSV avec succès !'),
+        backgroundColor: AppTheme.success,
+      ),
+    );
+  }
+
+  Future<void> _showCreateInscriptionDialog() async {
+    final localContext = context;
+    final prenomController = TextEditingController();
+    final nomController = TextEditingController();
+    final emailController = TextEditingController();
+    final phoneController = TextEditingController();
+    final formations = _db.getFormations();
+    Formation? selectedFormation = formations.isNotEmpty ? formations.first : null;
+    final selectedModules = <String>{
+      if (selectedFormation?.estStage != true) ...?selectedFormation?.modules,
+    };
+    final created = await showDialog<bool>(
+      context: localContext,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) {
+          return AlertDialog(
+            title: Text(
+              'Nouvelle inscription',
+              style: GoogleFonts.poppins(fontWeight: FontWeight.w700),
+            ),
+            content: SizedBox(
+              width: 520,
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextField(
+                      controller: prenomController,
+                      decoration: const InputDecoration(labelText: 'Prénom'),
+                    ),
+                    TextField(
+                      controller: nomController,
+                      decoration: const InputDecoration(labelText: 'Nom'),
+                    ),
+                    TextField(
+                      controller: emailController,
+                      keyboardType: TextInputType.emailAddress,
+                      decoration: const InputDecoration(labelText: 'Email'),
+                    ),
+                    TextField(
+                      controller: phoneController,
+                      keyboardType: TextInputType.phone,
+                      decoration: const InputDecoration(labelText: 'Téléphone'),
+                    ),
+                    const SizedBox(height: 12),
+                    DropdownButtonFormField<Formation>(
+                      initialValue: selectedFormation,
+                      decoration: const InputDecoration(labelText: 'Formation'),
+                      items: formations
+                          .map((formation) => DropdownMenuItem(
+                                value: formation,
+                                child: Text(formation.titre),
+                              ))
+                          .toList(),
+                      onChanged: (formation) {
+                        if (formation == null) return;
+                        setDialogState(() {
+                          selectedFormation = formation;
+                          selectedModules
+                            ..clear()
+                            ..addAll(formation.estStage ? const <String>[] : formation.modules);
+                        });
+                      },
+                    ),
+                    if (selectedFormation != null) ...[
+                      const SizedBox(height: 12),
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          selectedFormation!.estStage
+                              ? 'Modules SFP à sélectionner (exactement ${selectedFormation!.maxModulesParEtudiant ?? 3})'
+                              : 'Modules de la formation',
+                          style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+                        ),
+                      ),
+                      ...selectedFormation!.modules.map(
+                        (module) => CheckboxListTile(
+                          dense: true,
+                          contentPadding: EdgeInsets.zero,
+                          value: selectedModules.contains(module),
+                          title: Text(module),
+                          onChanged: (checked) {
+                            setDialogState(() {
+                              if (checked == true) {
+                                final limit = selectedFormation!.estStage
+                                    ? selectedFormation!.maxModulesParEtudiant ?? 3
+                                    : selectedFormation!.maxModulesParEtudiant;
+                                if (limit != null && selectedModules.length >= limit) {
+                                  ScaffoldMessenger.of(dialogContext).showSnackBar(
+                                    SnackBar(content: Text('Vous pouvez sélectionner au maximum $limit modules.')),
+                                  );
+                                  return;
+                                }
+                                selectedModules.add(module);
+                              } else {
+                                selectedModules.remove(module);
+                              }
+                            });
+                          },
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext),
+                child: const Text('Annuler'),
+              ),
+              ElevatedButton.icon(
+                icon: const Icon(Icons.check_circle_outline_rounded),
+                label: const Text('Inscrire'),
+                onPressed: () async {
+                  final email = emailController.text.trim();
+                  if (selectedFormation == null ||
+                      prenomController.text.trim().isEmpty ||
+                      nomController.text.trim().isEmpty ||
+                      email.isEmpty ||
+                      selectedModules.isEmpty) {
+                    ScaffoldMessenger.of(dialogContext).showSnackBar(
+                      const SnackBar(content: Text('Complétez l’identité, la formation et au moins un module.')),
+                    );
+                    return;
+                  }
+
+                  if (!email.contains('@') || email.length < 5) {
+                    ScaffoldMessenger.of(dialogContext).showSnackBar(
+                      const SnackBar(content: Text('Veuillez fournir une adresse email valide.')),
+                    );
+                    return;
+                  }
+
+                  if (selectedFormation!.estStage &&
+                      selectedModules.length != (selectedFormation!.maxModulesParEtudiant ?? 3)) {
+                    final required = selectedFormation!.maxModulesParEtudiant ?? 3;
+                    ScaffoldMessenger.of(dialogContext).showSnackBar(
+                      SnackBar(content: Text('Pour ce stage SFP, sélectionnez exactement $required modules.')),
+                    );
+                    return;
+                  }
+
+                  try {
+                    await _db.createInscription(
+                      etudiantId: 'admin_${DateTime.now().millisecondsSinceEpoch}',
+                      formationId: selectedFormation!.id,
+                      prenom: prenomController.text,
+                      nom: nomController.text,
+                      email: email,
+                      telephone: phoneController.text,
+                      modules: selectedModules.toList(),
+                      typeFormation: selectedFormation!.type.toString(),
+                    );
+                    if (!dialogContext.mounted) return;
+                    Navigator.pop(dialogContext, true);
+                  } catch (e) {
+                    if (!dialogContext.mounted) return;
+                    ScaffoldMessenger.of(dialogContext).showSnackBar(
+                      SnackBar(content: Text('Erreur: $e')),
+                    );
+                  }
+                },
+              ),
+            ],
+          );
+        },
+      ),
+    );
+
+    prenomController.dispose();
+    nomController.dispose();
+    emailController.dispose();
+    phoneController.dispose();
+
+    if (created == true && localContext.mounted) {
+      setState(() => filterStatus = 'en_attente');
+      ScaffoldMessenger.of(localContext).showSnackBar(
+        SnackBar(
+          content: const Text('✅ Dossier créé. Il sera transféré vers Étudiants après validation.'),
+          backgroundColor: AppTheme.success,
+        ),
+      );
+    }
+  }
+
+  Widget _buildFilterButtons(List<Inscription> allInscriptions) {
+    final pendingCount = allInscriptions.where((i) => i.status == InscriptionStatus.enAttente).length;
+    final rejectedCount = allInscriptions.where((i) => i.status == InscriptionStatus.rejetee).length;
+
     return SlideInUp(
       duration: const Duration(milliseconds: 600),
       delay: const Duration(milliseconds: 100),
       child: Row(
         children: [
           Expanded(
-            child: _buildFilterButton('En Attente', 'en_attente', AppTheme.warningDark),
+            child: _buildFilterButton('À Valider ($pendingCount)', 'en_attente', AppTheme.warningDark),
           ),
           const SizedBox(width: 12),
           Expanded(
-            child: _buildFilterButton('Validées', 'valide', AppTheme.success),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: _buildFilterButton('Rejetées', 'rejete', AppTheme.error),
+            child: _buildFilterButton('Rejetées ($rejectedCount)', 'rejete', AppTheme.error),
           ),
         ],
       ),
@@ -250,24 +530,36 @@ class _AdminInscriptionsState extends State<AdminInscriptions> with TickerProvid
     return StreamBuilder<List<Inscription>>(
       stream: _db.watchInscriptions(),
       builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(
-            child: CircularProgressIndicator(
-              valueColor: AlwaysStoppedAnimation(AppTheme.primary),
-            ),
-          );
-        }
-
         final allInscriptions = snapshot.data ?? [];
-        final filteredInscriptions = allInscriptions.where((i) {
-          if (filterStatus == 'valide' || filterStatus == 'acceptee') {
-            return i.status == InscriptionStatus.acceptee;
-          }
-          if (filterStatus == 'rejete' || filterStatus == 'rejetee') {
-            return i.status == InscriptionStatus.rejetee;
-          }
-          return i.status == InscriptionStatus.enAttente;
-        }).toList();
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildFilterButtons(allInscriptions),
+            const SizedBox(height: 24),
+            if (snapshot.connectionState == ConnectionState.waiting && allInscriptions.isEmpty)
+              const Center(
+                child: CircularProgressIndicator(
+                  valueColor: AlwaysStoppedAnimation(AppTheme.primary),
+                ),
+              )
+            else
+              _buildInscriptionsBody(allInscriptions),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildInscriptionsBody(List<Inscription> allInscriptions) {
+    // A validated application has completed its intake phase. The learner is
+    // managed from Étudiants / Stagiaires via the user record created on
+    // validation, so it must no longer appear in this intake queue.
+    final filteredInscriptions = allInscriptions.where((i) {
+      if (filterStatus == 'rejete' || filterStatus == 'rejetee') {
+        return i.status == InscriptionStatus.rejetee;
+      }
+      return i.status == InscriptionStatus.enAttente;
+    }).toList();
 
         if (filteredInscriptions.isEmpty) {
           return Center(
@@ -300,8 +592,6 @@ class _AdminInscriptionsState extends State<AdminInscriptions> with TickerProvid
             return _buildInscriptionCard(ins.id, ins.toMap(), index);
           },
         );
-      },
-    );
   }
 
   Widget _buildInscriptionCard(String inscriptionId, Map<String, dynamic> inscription, int index) {
@@ -426,6 +716,20 @@ class _AdminInscriptionsState extends State<AdminInscriptions> with TickerProvid
     Map<String, dynamic> userData,
     Map<String, dynamic> formationData,
   ) {
+    final prenom = (userData['prenom'] ?? inscription['prenom'] ?? '').toString().trim();
+    final nom = (userData['nom'] ?? inscription['nom'] ?? '').toString().trim();
+    final fullName = (prenom.isNotEmpty || nom.isNotEmpty) ? '$prenom $nom' : 'Stagiaire / Étudiant';
+    final email = (userData['email'] ?? inscription['email'] ?? 'N/A').toString();
+    final phone = (userData['telephone'] ?? userData['phone'] ?? inscription['telephone'] ?? 'N/A').toString();
+
+    final isStage = formationData['estStage'] == true;
+    final rawModules = (inscription['modules'] as List<dynamic>?) ??
+        (isStage ? <dynamic>[] : (formationData['modules'] as List<dynamic>?) ?? []);
+    final modulesList = rawModules.isEmpty
+        ? [isStage ? '• Aucun module SFP sélectionné' : '• Tous les modules de la formation']
+        : rawModules.map((m) => '• $m').toList();
+    final currentStatusStr = (inscription['status'] ?? inscription['statut'] ?? '').toString();
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -444,10 +748,10 @@ class _AdminInscriptionsState extends State<AdminInscriptions> with TickerProvid
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              _buildDialogSection('Étudiant', [
-                '${userData['prenom']} ${userData['nom']}',
-                userData['email'] ?? 'N/A',
-                userData['telephone'] ?? 'N/A',
+              _buildDialogSection('Étudiant / Stagiaire', [
+                fullName,
+                email,
+                phone,
               ]),
               SizedBox(height: 16),
               _buildDialogSection('Formation', [
@@ -457,35 +761,91 @@ class _AdminInscriptionsState extends State<AdminInscriptions> with TickerProvid
                 'Prix: ${_getFormationPrice(formationData, inscription)} FCFA',
               ]),
               SizedBox(height: 16),
-              _buildDialogSection('Modules Sélectionnés', [
-                ...((inscription['modules'] as List<dynamic>?) ?? []).map((m) => '• $m'),
-              ]),
-              if (inscription['description']?.isNotEmpty ?? false)
+              _buildDialogSection('Modules Sélectionnés', modulesList),
+              if (inscription['description']?.toString().isNotEmpty ?? false)
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     SizedBox(height: 16),
                     _buildDialogSection('Description', [
-                      inscription['description'],
+                      inscription['description'].toString(),
                     ]),
                   ],
                 ),
               SizedBox(height: 20),
-              _buildStatusSection(inscriptionId, inscription),
+              _buildStatusSection(inscriptionId, currentStatusStr),
             ],
           ),
         ),
         actions: [
-          TextButton(
+          TextButton.icon(
+            icon: const Icon(Icons.delete_forever_rounded, color: AppTheme.error, size: 18),
+            label: Text('Supprimer', style: GoogleFonts.poppins(color: AppTheme.error, fontWeight: FontWeight.w700)),
+            onPressed: () => _confirmDeleteInscription(context, inscriptionId, '${userData['prenom']} ${userData['nom']}'),
+          ),
+          ElevatedButton.icon(
+            icon: const Icon(Icons.close_rounded, size: 18),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.primary,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            label: Text('Fermer', style: GoogleFonts.poppins(fontWeight: FontWeight.w700)),
             onPressed: () => Navigator.pop(context),
-            child: Text('Fermer', style: GoogleFonts.poppins(fontWeight: FontWeight.w700)),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildStatusSection(String inscriptionId, Map<String, dynamic> inscription) {
+  Future<void> _confirmDeleteInscription(BuildContext context, String id, String name) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            const Icon(Icons.warning_amber_rounded, color: AppTheme.error, size: 24),
+            const SizedBox(width: 10),
+            Text('Supprimer l\'inscription', style: GoogleFonts.poppins(fontWeight: FontWeight.w700, fontSize: 16)),
+          ],
+        ),
+        content: Text(
+          'Voulez-vous vraiment supprimer l\'inscription de "$name" ? Cette action est irréversible.',
+          style: GoogleFonts.poppins(fontSize: 13),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text('Annuler', style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: AppTheme.error),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text('Supprimer', style: GoogleFonts.poppins(fontWeight: FontWeight.w700, color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      await _db.deleteInscription(id);
+      if (!context.mounted) return;
+      Navigator.pop(context);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('✅ Inscription supprimée avec succès'),
+          backgroundColor: AppTheme.error,
+        ),
+      );
+    }
+  }
+
+  Widget _buildStatusSection(String inscriptionId, dynamic currentStatusInput) {
+    final currentStatusStr = (currentStatusInput is Map)
+        ? (currentStatusInput['status'] ?? currentStatusInput['statut'] ?? '').toString()
+        : (currentStatusInput ?? '').toString();
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -509,7 +869,7 @@ class _AdminInscriptionsState extends State<AdminInscriptions> with TickerProvid
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Statut Actuel: ${_getStatusLabel(inscription['statut'])}',
+                'Statut Actuel: ${_getStatusLabel(currentStatusStr)}',
                 style: GoogleFonts.poppins(
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
@@ -524,7 +884,7 @@ class _AdminInscriptionsState extends State<AdminInscriptions> with TickerProvid
                       'En Attente',
                       'en_attente',
                       Colors.amber,
-                      inscription['statut'],
+                      currentStatusStr,
                       () => _updateStatus(inscriptionId, 'en_attente'),
                     ),
                   ),
@@ -533,8 +893,8 @@ class _AdminInscriptionsState extends State<AdminInscriptions> with TickerProvid
                     child: _buildStatusButton(
                       'Validée',
                       'valide',
-                      Color(0xFF10B981),
-                      inscription['statut'],
+                      AppTheme.success,
+                      currentStatusStr,
                       () => _updateStatus(inscriptionId, 'valide'),
                     ),
                   ),
@@ -543,8 +903,8 @@ class _AdminInscriptionsState extends State<AdminInscriptions> with TickerProvid
                     child: _buildStatusButton(
                       'Rejetée',
                       'rejete',
-                      Color(0xFFEF4444),
-                      inscription['statut'],
+                      AppTheme.error,
+                      currentStatusStr,
                       () => _updateStatus(inscriptionId, 'rejete'),
                     ),
                   ),
@@ -564,7 +924,7 @@ class _AdminInscriptionsState extends State<AdminInscriptions> with TickerProvid
     String currentStatus,
     VoidCallback onTap,
   ) {
-    final isActive = status == currentStatus;
+    final isActive = _getStatusLabel(status) == _getStatusLabel(currentStatus);
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -603,7 +963,7 @@ class _AdminInscriptionsState extends State<AdminInscriptions> with TickerProvid
         ...items.map((item) => Padding(
               padding: EdgeInsets.only(bottom: 4),
               child: Text(
-                item,
+                      item,
                 style: GoogleFonts.poppins(
                   fontSize: 12,
                   color: Colors.black87,
@@ -616,19 +976,16 @@ class _AdminInscriptionsState extends State<AdminInscriptions> with TickerProvid
 
   Future<void> _updateStatus(String inscriptionId, String newStatus) async {
     if (newStatus == 'valide') {
-      // Show dialog to set hours for each module
       await _showValidationDialog(inscriptionId);
     } else {
       try {
         await _db.updateInscriptionStatus(inscriptionId, newStatus);
-
         if (!mounted) return;
         Navigator.pop(context);
-
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
+          const SnackBar(
             content: Text('✅ Statut mis à jour'),
-            backgroundColor: Color(0xFF10B981),
+            backgroundColor: AppTheme.success,
           ),
         );
       } catch (e) {
@@ -636,7 +993,7 @@ class _AdminInscriptionsState extends State<AdminInscriptions> with TickerProvid
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('❌ Erreur: $e'),
-            backgroundColor: Color(0xFFEF4444),
+            backgroundColor: AppTheme.error,
           ),
         );
       }
@@ -648,7 +1005,23 @@ class _AdminInscriptionsState extends State<AdminInscriptions> with TickerProvid
     if (inscription == null) return;
 
     final form = _db.getFormationById(inscription.formationId);
-    final modules = form?.modules ?? [];
+    final selectedModules = inscription.modules
+            ?.where((module) => module.trim().isNotEmpty)
+            .toSet()
+            .toList() ??
+        const <String>[];
+    
+    final modules = selectedModules.isNotEmpty
+        ? selectedModules
+        : (form?.estStage == true ? const <String>[] : form?.modules ?? const <String>[]);
+    
+    if (modules.isEmpty) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Aucun module choisi sur cette inscription SFP. Corrigez le dossier avant validation.')),
+      );
+      return;
+    }
 
     int initialDefaultHours = 1;
     if (form != null) {
@@ -808,7 +1181,7 @@ class _AdminInscriptionsState extends State<AdminInscriptions> with TickerProvid
                                     topLeft: Radius.circular(9),
                                     bottomLeft: Radius.circular(9),
                                   ),
-                                    child: Container(
+                                  child: Container(
                                     padding: const EdgeInsets.all(8),
                                     decoration: BoxDecoration(
                                       color: hours > 1 ? AppTheme.accent.withValues(alpha: 0.06) : AppTheme.surfaceVariant,
@@ -827,7 +1200,7 @@ class _AdminInscriptionsState extends State<AdminInscriptions> with TickerProvid
                                 // Affichage du nombre d'heures
                                 Container(
                                   padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                                    child: Text(
+                                  child: Text(
                                     '$hours h',
                                     style: GoogleFonts.poppins(
                                       fontSize: 14,
@@ -847,11 +1220,11 @@ class _AdminInscriptionsState extends State<AdminInscriptions> with TickerProvid
                                     topRight: Radius.circular(9),
                                     bottomRight: Radius.circular(9),
                                   ),
-                                    child: Container(
+                                  child: Container(
                                     padding: const EdgeInsets.all(8),
                                     decoration: BoxDecoration(
                                       color: AppTheme.primary.withValues(alpha: 0.06),
-                                      borderRadius: BorderRadius.only(
+                                      borderRadius: const BorderRadius.only(
                                         topRight: Radius.circular(9),
                                         bottomRight: Radius.circular(9),
                                       ),
@@ -874,7 +1247,7 @@ class _AdminInscriptionsState extends State<AdminInscriptions> with TickerProvid
               ),
             ),
             actions: [
-                OutlinedButton(
+              OutlinedButton(
                 onPressed: () => Navigator.pop(ctx),
                 style: OutlinedButton.styleFrom(
                   foregroundColor: AppTheme.accent,
@@ -885,25 +1258,52 @@ class _AdminInscriptionsState extends State<AdminInscriptions> with TickerProvid
                 ),
                 child: Text('Annuler', style: GoogleFonts.poppins(fontWeight: FontWeight.w700)),
               ),
-                ElevatedButton.icon(
-                icon: const Icon(Icons.check_circle_rounded, size: 18),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppTheme.primary,
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                  elevation: 2,
-                ),
-                label: Text('Valider', style: GoogleFonts.poppins(fontWeight: FontWeight.w700)),
-                onPressed: () async {
-                  await _db.updateInscriptionStatus(inscriptionId, 'valide');
-                  if (!ctx.mounted) return;
-                  Navigator.pop(ctx);
-                  ScaffoldMessenger.of(ctx).showSnackBar(
-                    const SnackBar(
-                      content: Text('✅ Inscription validée!'),
-                      backgroundColor: Color(0xFF10B981),
+              StatefulBuilder(
+                builder: (context, setBtnState) {
+                  bool isValidating = false;
+                  return ElevatedButton.icon(
+                    icon: isValidating
+                        ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                          )
+                        : const Icon(Icons.check_circle_rounded, size: 18),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: isValidating ? Colors.grey.shade400 : AppTheme.primary,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                      elevation: 2,
                     ),
+                    label: Text(isValidating ? 'Validation...' : 'Valider', style: GoogleFonts.poppins(fontWeight: FontWeight.w700)),
+                    onPressed: isValidating
+                        ? null
+                        : () async {
+                            setBtnState(() => isValidating = true);
+                            try {
+                              final student = await _db.acceptInscription(
+                                inscriptionId,
+                                moduleHours: moduleHours,
+                                formationOverride: form,
+                              );
+                              if (!ctx.mounted) return;
+                              Navigator.pop(ctx);
+                              ScaffoldMessenger.of(ctx).showSnackBar(
+                                SnackBar(
+                                  content: Text('✅ Inscription validée ! Matricule attribué : ${student.matricule ?? ''}'),
+                                  backgroundColor: AppTheme.success,
+                                  duration: const Duration(seconds: 5),
+                                ),
+                              );
+                            } catch (error) {
+                              if (!ctx.mounted) return;
+                              setBtnState(() => isValidating = false);
+                              ScaffoldMessenger.of(ctx).showSnackBar(
+                                SnackBar(content: Text('❌ Validation impossible : $error'), backgroundColor: AppTheme.error),
+                              );
+                            }
+                          },
                   );
                 },
               ),
@@ -932,17 +1332,9 @@ class _AdminInscriptionsState extends State<AdminInscriptions> with TickerProvid
           }).isNotEmpty;
 
           if (!existing) {
-            final montant = (item['montant'] ?? 0).toDouble();
-            PaymentMethod methode = PaymentMethod.virement;
-            final m = (item['methode'] ?? '').toString().toLowerCase();
-            if (m.contains('carte')) methode = PaymentMethod.carte;
-            if (m.contains('especes')) methode = PaymentMethod.especes;
-
             await _db.createInscription(
               etudiantId: item['etudiantId']?.toString() ?? 'web_${DateTime.now().millisecondsSinceEpoch}',
               formationId: item['formationId']?.toString() ?? '',
-              montant: montant,
-              methode: methode,
               prenom: item['prenom']?.toString(),
               nom: item['nom']?.toString(),
               email: item['email']?.toString(),
@@ -961,29 +1353,25 @@ class _AdminInscriptionsState extends State<AdminInscriptions> with TickerProvid
     return importedCount;
   }
 
-  Color _getStatusColor(String status) {
-    switch (status) {
-      case 'en_attente':
-        return Colors.amber;
-      case 'valide':
-        return Color(0xFF10B981);
-      case 'rejete':
-        return Color(0xFFEF4444);
-      default:
-        return Colors.grey;
+  Color _getStatusColor(dynamic statusInput) {
+    final status = (statusInput ?? '').toString().toLowerCase();
+    if (status.contains('valide') || status.contains('accepte')) {
+      return AppTheme.success;
+    } else if (status.contains('rejet')) {
+      return AppTheme.error;
+    } else {
+      return Colors.amber;
     }
   }
 
-  String _getStatusLabel(String status) {
-    switch (status) {
-      case 'en_attente':
-        return 'En Attente';
-      case 'valide':
-        return 'Validée';
-      case 'rejete':
-        return 'Rejetée';
-      default:
-        return 'Unknown';
+  String _getStatusLabel(dynamic statusInput) {
+    final status = (statusInput ?? '').toString().toLowerCase();
+    if (status.contains('valide') || status.contains('accepte')) {
+      return 'Validée';
+    } else if (status.contains('rejet')) {
+      return 'Rejetée';
+    } else {
+      return 'En Attente';
     }
   }
 
@@ -1001,8 +1389,10 @@ class _AdminInscriptionsState extends State<AdminInscriptions> with TickerProvid
   }
 
   String _getFormationPrice(Map<String, dynamic> formationData, Map<String, dynamic> inscription) {
-    final type = inscription['typeFormation'] ?? formationData['type'] ?? 'presentiel';
-    if (type == 'enligne' && formationData['prixEnLigne'] != null) {
+    final type = (inscription['typeFormation'] ?? formationData['type'] ?? 'presentiel')
+        .toString()
+        .toLowerCase();
+    if (type.contains('enligne') && formationData['prixEnLigne'] != null) {
       return formationData['prixEnLigne'].toString();
     }
     return formationData['prix']?.toString() ?? '0';

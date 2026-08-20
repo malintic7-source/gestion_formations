@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
@@ -7,12 +6,13 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:animate_do/animate_do.dart';
 import 'package:gestion_formations/Models/user.dart';
 import 'package:gestion_formations/Models/formation.dart';
+import 'package:gestion_formations/Models/inscription.dart';
 import 'package:gestion_formations/Services/db_services.dart';
-import 'package:qr_flutter/qr_flutter.dart';
-import 'package:share_plus/share_plus.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:url_launcher/url_launcher.dart';
+import 'package:gestion_formations/Services/pdf_service.dart';
 import 'package:gestion_formations/config/theme.dart';
+import 'package:gestion_formations/utils/share_helper.dart';
+import 'package:qr_flutter/qr_flutter.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class StudentFormations extends StatefulWidget {
   final User user;
@@ -46,17 +46,32 @@ class _StudentFormationsState extends State<StudentFormations> with TickerProvid
 
   @override
   Widget build(BuildContext context) {
-    final isMobile = MediaQuery.of(context).size.width < 768;
+    final isMobile = MediaQuery.of(context).size.width < 600;
+    final width = MediaQuery.of(context).size.width;
+    final maxWidth = width > 1200 ? 1100.0 : width * 0.95;
 
-    return SingleChildScrollView(
-      padding: EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _buildHeader(isMobile),
-          SizedBox(height: 28),
-          _buildFormationsList(),
-        ],
+    return Center(
+      child: ConstrainedBox(
+        constraints: BoxConstraints(maxWidth: maxWidth),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+          child: Container(
+            decoration: BoxDecoration(
+              color: AppTheme.surface,
+              borderRadius: BorderRadius.circular(24),
+              boxShadow: AppTheme.cardShadow,
+            ),
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildHeader(isMobile),
+                const SizedBox(height: 28),
+                _buildFormationsList(),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -126,11 +141,44 @@ class _StudentFormationsState extends State<StudentFormations> with TickerProvid
           );
         }
 
-        final formations = allFormations.map((f) => {
-          'title': f.titre,
-          'type': f.type.name,
-          'formationId': f.id,
-          'modules': f.modules.map((m) => {'title': m, 'completed': false}).toList(),
+        final currentUser = _db.getUserById(widget.user.id) ?? widget.user;
+        final userAssigned = currentUser.assignedFormations;
+        final userAssignedIds = userAssigned.map((item) => item['formationId']?.toString()).toSet();
+        final userInscriptions = _db.getInscriptions().where((i) {
+          final isSameUser = i.etudiantId == currentUser.id || (i.email != null && i.email!.trim().toLowerCase() == currentUser.email.trim().toLowerCase());
+          return isSameUser && i.status == InscriptionStatus.acceptee;
+        }).map((i) => i.formationId).toSet();
+
+        final enrolledIds = {...userAssignedIds, ...userInscriptions}.whereType<String>().toSet();
+
+        // STRICT: Seules les formations affectées manuellement par l'admin ou inscrites
+        final filteredFormations = allFormations.where((f) => enrolledIds.contains(f.id)).toList();
+
+        final formations = filteredFormations.map((f) {
+          final assignedItem = userAssigned.firstWhere(
+            (item) => item['formationId'] == f.id,
+            orElse: () => <String, dynamic>{},
+          );
+          final assignedModulesList = assignedItem['modules'] as List<dynamic>?;
+
+          final modulesData = (assignedModulesList != null && assignedModulesList.isNotEmpty)
+              ? assignedModulesList.map((m) {
+                  final map = m as Map<String, dynamic>;
+                  final done = (map['doneHours'] ?? 0) as num;
+                  final assigned = (map['assignedHours'] ?? 1) as num;
+                  return {
+                    'title': map['title']?.toString() ?? '',
+                    'completed': done >= assigned && done > 0,
+                  };
+                }).toList()
+              : f.modules.map((m) => {'title': m, 'completed': false}).toList();
+
+          return {
+            'title': f.titre,
+            'type': f.type.name,
+            'formationId': f.id,
+            'modules': modulesData,
+          };
         }).toList();
 
         if (formations.isEmpty) {
@@ -169,21 +217,24 @@ class _StudentFormationsState extends State<StudentFormations> with TickerProvid
     final formationId = formationData['formationId'] ?? '';
     final formationTitle = formationData['title'] ?? 'Formation';
     final modules = formationData['modules'] as List<dynamic>? ?? [];
-    final modulesWithHours = modules.where((m) {
-      final assignedHours = (m['assignedHours'] ?? 0) as int;
-      return assignedHours > 0;
+    final modulesWithHours = modules.map((m) {
+      return {
+        'title': m['title'] ?? '',
+        'assignedHours': (m['assignedHours'] as int?) ?? 0,
+        'doneHours': (m['doneHours'] as int?) ?? 0,
+      };
     }).toList();
 
     if (modulesWithHours.isEmpty) {
       return SizedBox.shrink();
     }
 
-      final totalAssignedHours = modulesWithHours.fold<int>(0, (acc, m) {
-        return acc + (m['assignedHours'] as int? ?? 0);
+    final totalAssignedHours = modulesWithHours.fold<int>(0, (acc, m) {
+      return acc + (m['assignedHours'] as int? ?? 0);
     });
 
-      final totalDoneHours = modulesWithHours.fold<int>(0, (acc, m) {
-        return acc + (m['doneHours'] as int? ?? 0);
+    final totalDoneHours = modulesWithHours.fold<int>(0, (acc, m) {
+      return acc + (m['doneHours'] as int? ?? 0);
     });
 
     final progressPercent = totalAssignedHours > 0 ? (totalDoneHours / totalAssignedHours * 100).toStringAsFixed(1) : '0';
@@ -345,12 +396,194 @@ class _StudentFormationsState extends State<StudentFormations> with TickerProvid
                 ),
                 SizedBox(height: 16),
                 _buildFormateurs(formationId, modulesWithHours),
+                SizedBox(height: 16),
+                _buildAttestationSection(
+                  _db.getFormationById(formationId) ??
+                      Formation(
+                        id: formationId,
+                        titre: formationTitle,
+                        description: '',
+                        modules: modulesWithHours.map((m) => m['title']?.toString() ?? '').toList(),
+                        formateurIds: [],
+                        prix: 0,
+                        type: FormationType.presentielle,
+                        status: FormationStatus.enCours,
+                        dureeSemaines: 4,
+                        horaires: [],
+                        dateCreation: DateTime.now(),
+                      ),
+                  modulesWithHours,
+                ),
               ],
             ),
           ),
         ),
       ),
     );
+  }
+
+  Widget _buildAttestationSection(Formation formation, List<dynamic> modulesWithHours) {
+    final inscription = _db.getInscriptions().where((i) {
+      final isUser = i.etudiantId == widget.user.id ||
+          (i.email != null && i.email!.trim().toLowerCase() == widget.user.email.trim().toLowerCase());
+      return isUser && i.formationId == formation.id && i.status == InscriptionStatus.acceptee;
+    }).firstOrNull;
+
+    final balance = inscription != null ? _db.getInscriptionBalance(inscription.id) : 999999.0;
+    final isPaid = inscription != null && (inscription.paiementEffectue || balance <= 0);
+
+    final isCompleted = _db.isStudentFormationCompleted(
+      studentId: widget.user.id,
+      formationId: formation.id,
+    );
+
+    if (isPaid && isCompleted) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [Color(0xFFFFFBEB), Color(0xFFFEF3C7)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: const Color(0xFFF59E0B), width: 1.5),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFFF59E0B).withValues(alpha: 0.15),
+              blurRadius: 8,
+              offset: const Offset(0, 3),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: const BoxDecoration(
+                    color: Color(0xFFF59E0B),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.workspace_premium_rounded, size: 20, color: Colors.white),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Attestation Officielle Disponible !',
+                        style: GoogleFonts.poppins(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                          color: const Color(0xFF92400E),
+                        ),
+                      ),
+                      Text(
+                        'Formation terminée et soldée à 100%. Vous pouvez télécharger votre attestation signée.',
+                        style: GoogleFonts.poppins(
+                          fontSize: 11,
+                          color: const Color(0xFF78350F),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF1E3A8A),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  elevation: 2,
+                ),
+                icon: const Icon(Icons.download_rounded, size: 18),
+                label: Text(
+                  'Télécharger mon Attestation PDF',
+                  style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w700),
+                ),
+                onPressed: () async {
+                  try {
+                    final targetInscription = inscription ??
+                        Inscription(
+                          id: 'ins_${widget.user.id}_${formation.id}',
+                          etudiantId: widget.user.id,
+                          formationId: formation.id,
+                          status: InscriptionStatus.acceptee,
+                          dateInscription: DateTime.now(),
+                          paiementEffectue: true,
+                          nom: widget.user.nom,
+                          prenom: widget.user.prenom,
+                          email: widget.user.email,
+                          telephone: widget.user.phone,
+                          modules: formation.modules,
+                        );
+
+                    final pdfBytes = await PdfService().generateAttestationPdf(
+                      inscription: targetInscription,
+                      formation: formation,
+                    );
+
+                    await PdfService().printOrDownloadPdf(
+                      pdfBytes: pdfBytes,
+                      filename: 'Attestation_${widget.user.prenom}_${widget.user.nom}_${formation.titre}.pdf',
+                    );
+
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Attestation téléchargée avec succès !', style: GoogleFonts.poppins()),
+                          backgroundColor: Colors.green,
+                        ),
+                      );
+                    }
+                  } catch (e) {
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Erreur: $e'), backgroundColor: AppTheme.error),
+                      );
+                    }
+                  }
+                },
+              ),
+            ),
+          ],
+        ),
+      );
+    } else if (isCompleted && !isPaid) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: const Color(0xFFFFF7ED),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: const Color(0xFFF97316)),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.info_outline_rounded, color: Color(0xFFEA580C), size: 20),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                'Formation terminée. Solde restant : ${balance.toStringAsFixed(0)} FCFA pour débloquer votre attestation.',
+                style: GoogleFonts.poppins(fontSize: 11, fontWeight: FontWeight.w600, color: const Color(0xFF9A3412)),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return const SizedBox.shrink();
   }
 
   Widget _buildFormateurs(String formationId, List<dynamic> studentModules) {
@@ -521,11 +754,6 @@ class _StudentFormationsState extends State<StudentFormations> with TickerProvid
                     );
                     return;
                   }
-
-                  final directory = await getTemporaryDirectory();
-                  final file = File('${directory.path}/formation_qr.png');
-                  await file.writeAsBytes(bytes);
-
                   final shareText = '''
 📚 *$formationTitle*
 
@@ -535,11 +763,7 @@ $shareUrl
 👇 Scannez le QR code ci-dessous pour accéder directement!
                   ''';
 
-                  if (!dialogContext.mounted) return;
-                  Share.shareXFiles(
-                    [XFile(file.path)],
-                    text: shareText,
-                  );
+                  await shareBytes(bytes, shareText, 'formation_qr.png');
                 },
                 borderRadius: BorderRadius.circular(8),
                 child: Padding(
@@ -569,31 +793,11 @@ $shareUrl
   }
 
   Future<String> _buildLocalShareUrl(String formationId) async {
-    // Prefer the current app origin so shared links work in Docker/local dev
     try {
-      final origin = Uri.base.origin;
-      final localTarget = '$origin/formation.html?id=$formationId';
-
-      // Try to expose LAN IP for sharing on the same network (use host port 8080)
-      const port = 8080;
-      const path = 'formation.html';
-      try {
-        final interfaces = await NetworkInterface.list(includeLoopback: false, type: InternetAddressType.IPv4);
-        for (final interface in interfaces) {
-          for (final address in interface.addresses) {
-            if (!address.isLoopback && address.type == InternetAddressType.IPv4) {
-              return 'http://${address.address}:$port/$path?id=$formationId';
-            }
-          }
-        }
-      } catch (e) {
-        debugPrint('Local LAN URL lookup failed: $e');
-      }
-
-      return localTarget;
-    } catch (e) {
-      return 'http://127.0.0.1:8080/formation.html?id=$formationId';
-    }
+      final origin = Uri.base.origin.startsWith('http') ? Uri.base.origin : '';
+      if (origin.isNotEmpty) return '$origin/formation.html?id=$formationId';
+    } catch (_) {}
+    return '/formation.html?id=$formationId';
   }
 
   Future<Uint8List?> _captureQrPng(GlobalKey key) async {

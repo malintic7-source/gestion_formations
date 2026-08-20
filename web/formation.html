@@ -20,7 +20,7 @@
 
     <!-- Font Awesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js" integrity="sha512-d6gV+CARV7s1kJqumzXN1UPApGYn1NkJMi2rK1yT7Kx5rIEq1VnzaLnlKpQThHpsdPPYVt5BS+Xn+GvT/ocyBA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
 
     <style>
         * {
@@ -53,10 +53,10 @@
         .header {
             background: linear-gradient(135deg, var(--primary) 0%, #2080D3 40%, var(--accent) 100%);
             color: white;
-            padding: 56px 48px 64px;
-            border-radius: 32px;
-            margin-bottom: 44px;
-            box-shadow: 0 30px 100px rgba(0, 102, 204, 0.26), 0 0 60px rgba(255, 107, 53, 0.12);
+            padding: 24px 28px 24px;
+            border-radius: 20px;
+            margin-bottom: 24px;
+            box-shadow: 0 16px 50px rgba(0, 102, 204, 0.22), 0 0 30px rgba(255, 107, 53, 0.10);
             text-align: center;
             position: relative;
             overflow: hidden;
@@ -102,36 +102,46 @@
             align-items: center;
             justify-content: space-between;
             gap: 16px;
-            margin-bottom: 30px;
+            margin-bottom: 12px;
         }
 
         .header-left {
             display: flex;
             align-items: center;
-            gap: 16px;
+            flex: 1;
+            justify-content: flex-start;
+        }
+
+        .header-center {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex: 1;
         }
 
         .header-right {
             display: flex;
             align-items: center;
+            justify-content: flex-end;
+            flex: 1;
             gap: 14px;
         }
 
         .share-button {
             background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
-            padding: 14px 26px;
-            border-radius: 28px;
+            padding: 10px 20px;
+            border-radius: 20px;
             border: none;
-            font-size: 14px;
+            font-size: 13px;
             font-weight: 700;
             color: white;
             cursor: pointer;
             transition: transform 0.25s ease, box-shadow 0.25s ease;
             display: flex;
             align-items: center;
-            gap: 10px;
-            letter-spacing: 0.5px;
-            box-shadow: 0 16px 30px rgba(0, 102, 204, 0.24);
+            gap: 8px;
+            letter-spacing: 0.3px;
+            box-shadow: 0 10px 20px rgba(0, 102, 204, 0.20);
         }
 
         .share-button:hover {
@@ -249,15 +259,16 @@
         }
 
         .formation-image-card {
-            width: 90px;
-            height: 90px;
-            border-radius: 16px;
+            width: 70px;
+            height: 70px;
+            border-radius: 14px;
             overflow: hidden;
             cursor: pointer;
-            border: 3px solid rgba(255, 255, 255, 0.35);
+            border: 2px solid rgba(255, 255, 255, 0.4);
             transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
             flex-shrink: 0;
-            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+            box-shadow: 0 6px 18px rgba(0, 0, 0, 0.18);
+            background: white;
         }
 
         .formation-image-card:hover {
@@ -550,38 +561,41 @@
         }
 
         .header-logo {
-            width: 140px;
-            height: 140px;
+            width: 75px;
+            height: 75px;
             object-fit: contain;
-            filter: drop-shadow(0 18px 45px rgba(0, 0, 0, 0.28));
+            background: white;
+            padding: 6px;
+            border-radius: 14px;
+            box-shadow: 0 6px 18px rgba(0, 0, 0, 0.15);
             animation: slideDown 0.8s ease-out 0.1s backwards;
         }
 
         .header h1 {
-            font-size: 46px;
+            font-size: 28px;
             font-weight: 900;
-            margin-bottom: 18px;
-            letter-spacing: -1.5px;
-            line-height: 1.12;
+            margin-bottom: 4px;
+            letter-spacing: -0.5px;
+            line-height: 1.15;
             animation: slideDown 0.8s ease-out 0.15s backwards;
-            text-shadow: 0 4px 22px rgba(0, 0, 0, 0.18);
+            text-shadow: 0 2px 14px rgba(0, 0, 0, 0.18);
         }
 
         .header p {
-            font-size: 16px;
+            font-size: 13px;
             opacity: 0.95;
             font-weight: 500;
-            letter-spacing: 0.5px;
+            letter-spacing: 0.3px;
             animation: slideDown 0.8s ease-out 0.25s backwards;
-            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            text-shadow: 0 1px 6px rgba(0, 0, 0, 0.1);
         }
 
         .header-divider {
-            width: 80px;
-            height: 4px;
+            width: 50px;
+            height: 3px;
             background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.5), transparent);
-            margin: 24px auto;
-            border-radius: 3px;
+            margin: 8px auto;
+            border-radius: 2px;
             animation: slideDown 0.8s ease-out 0.3s backwards;
         }
 
@@ -1183,108 +1197,201 @@
     </div>
 
     <script type="module">
-        // Firebase client removed: using local fallback for static hosting / LAN sharing.
-        // If you later add a backend, implement `fetchFormationFromBackend(id)`.
-
-        async function fetchFormationFromBackend(id) {
-            try {
-                const resp = await fetch('/api/formations', { cache: 'no-store' });
-                if (!resp.ok) return null;
-                const list = await resp.json();
-                if (!Array.isArray(list)) return null;
-                return list.find(f => f.id === id) || null;
-            } catch (e) {
-                console.warn('fetchFormationFromBackend failed', e);
-                return null;
-            }
-        }
-        
         async function submitInscriptionToBackend(inscriptionData) {
-            // Try posting to API endpoint (/api/inscriptions). If it fails, persist locally.
+            const inscId = inscriptionData.id || `insc_web_${Date.now()}`;
+            inscriptionData.id = inscId;
+            inscriptionData.status = 'enAttente';
+            inscriptionData.statut = 'en_attente';
+            inscriptionData.dateInscription = new Date().toISOString();
+
             try {
-                const resp = await fetch('/api/inscriptions', {
-                    method: 'POST',
+                const resp = await fetch(`/api/inscriptions/${encodeURIComponent(inscId)}`, {
+                    method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(inscriptionData),
+                    body: JSON.stringify({
+                        ...inscriptionData,
+                        etudiantId: inscriptionData.etudiantId || `user_web_${Date.now()}`,
+                        paiementEffectue: false,
+                        source: 'web'
+                    }),
                 });
-                if (!resp.ok) throw new Error('API error');
-                const json = await resp.json();
-                return { success: true, id: json.id };
+                if (resp.ok) {
+                    console.log('Inscription transmise à l’API locale');
+                    return { success: true, id: inscId };
+                }
             } catch (e) {
-                console.warn('Backend unavailable, saving locally', e);
-                saveLocalInscription(inscriptionData);
-                return { success: true, fallback: true };
+                console.warn('API locale indisponible :', e);
             }
+            saveLocalInscription(inscriptionData);
+            return { success: true, local: true };
         }
 
         const urlParams = new URLSearchParams(window.location.search);
-        const pathParts = window.location.pathname.split('/').filter(p => p.length > 0);
-        const formationId = urlParams.get('id') || pathParts[pathParts.length - 1] || '';
+        const rawIdParam = urlParams.get('id') || urlParams.get('formationId') || urlParams.get('formation_id') || '';
+        let formationId = rawIdParam.trim();
+        if (formationId.endsWith('.html') || formationId === 'formation.html') {
+            formationId = '';
+        }
         const localTestMode = urlParams.get('localTest') === 'true';
 
-        const localFormations = {
-            'form_1': {
+        const fallbackFormations = [
+            {
+                id: 'form_1',
                 titre: 'Développement Mobile Flutter',
                 description: 'Apprenez à créer des applications iOS et Android performantes et réactives avec Flutter et Dart.',
                 modules: ['Bases de Dart', 'Widgets et UI Material 3', 'Gestion d\'état', 'Intégration API REST'],
                 formateurIds: ['formateur_1'],
-                prix: '150000',
-                prixEnLigne: '120000',
+                prix: 150000,
+                prixEnLigne: 120000,
                 type: 'mixte',
                 estStage: false,
                 maxModulesParEtudiant: 4,
-                dateDebut: { seconds: Math.floor(Date.now() / 1000) - 86400 * 5 },
-                dateFin: { seconds: Math.floor(Date.now() / 1000) + 86400 * 50 },
-                dateFinInscription: { seconds: Math.floor(Date.now() / 1000) + 86400 * 10 },
+                dateDebut: '2026-07-30T00:00:00.000Z',
+                dateFin: '2026-09-18T00:00:00.000Z',
+                dateFinInscription: '2026-08-18T00:00:00.000Z',
                 duree: '8 semaines',
                 niveau: 'Tous niveaux',
                 format: 'Mixte',
-                imageUrl: 'https://via.placeholder.com/600x400?text=Flutter+Mobile'
+                imageUrl: 'images/Malintic.png'
             },
-            'form_2': {
+            {
+                id: 'form_2',
                 titre: 'Développement Web Fullstack React & Node.js',
                 description: 'Formation complète pour concevoir des applications web modernes et évolutives.',
                 modules: ['HTML5/CSS3/JavaScript ES6', 'React.js Fundamentals', 'Node.js & Express', 'MongoDB'],
                 formateurIds: ['formateur_1'],
-                prix: '180000',
-                prixEnLigne: '140000',
+                prix: 180000,
+                prixEnLigne: 140000,
                 type: 'enligne',
                 estStage: false,
                 maxModulesParEtudiant: 4,
-                dateDebut: { seconds: Math.floor(Date.now() / 1000) + 86400 * 10 },
-                dateFin: { seconds: Math.floor(Date.now() / 1000) + 86400 * 80 },
-                dateFinInscription: { seconds: Math.floor(Date.now() / 1000) + 86400 * 5 },
+                dateDebut: '2026-08-18T00:00:00.000Z',
+                dateFin: '2026-10-07T00:00:00.000Z',
+                dateFinInscription: '2026-08-13T00:00:00.000Z',
                 duree: '10 semaines',
                 niveau: 'Intermédiaire',
                 format: 'En ligne',
-                imageUrl: 'https://via.placeholder.com/600x400?text=Fullstack+Web'
+                imageUrl: 'images/Malintic.png'
             },
-            // legacy local test
-            'test-formation': {
-                titre: 'Formation Test LAN',
-                description: 'Inscription locale de test disponible sur votre réseau.',
-                modules: ['Module 1', 'Module 2', 'Module 3'],
-                modulesBonus: ['Bonus A', 'Bonus B'],
-                prix: '100000',
-                prixEnLigne: '80000',
-                type: 'enligne',
-                estStage: false,
+            {
+                id: 'form_sfp_2026',
+                titre: 'Stage de Formation Professionnelle - SFP5',
+                description: 'Stage professionnel de 3 mois. Choisissez 3 modules parmi les 19 proposés et bénéficiez des bonus offerts : initiation en informatique, PowerPoint + IA et mémoire de fin d’étude universitaire ou professionnel.',
+                modules: ['Base de données + IA', 'Initiation à Windows Server', 'Initiation au Réseau Téléphonique VoIP', 'Initiation à la Sécurité Informatique', 'Maintenance Informatique', 'Système de Vidéosurveillance Analogique', 'Initiation au Réseau Informatique', 'Initiation au Système de Panneau Solaire (SPS)', 'Adobe Photoshop', 'Adobe Première Pro', 'CapCut / VN + IA (Vidéos)', 'Canva + IA (Affiches)', 'Sage 100 comptabilité Générale', 'IMITECH (Initiation en entrepreneuriat : Business Model Canvas)', 'Word et Excel', 'Community Management', 'Intelligence Artificielle (IA)', 'Internet des Objets (IOT)', 'Création d’applications (Flutter)'],
+                modulesBonus: ['Initiation en informatique (Matériels, Logiciels)', 'PowerPoint + IA', 'Mémoire de fin d’étude Universitaire ou Professionnel'],
+                modulePrices: {
+                    'Base de données + IA': 33000,
+                    'Initiation à Windows Server': 28000,
+                    'Initiation au Réseau Téléphonique VoIP': 26000,
+                    'Initiation à la Sécurité Informatique': 30000,
+                    'Maintenance Informatique': 29000,
+                    'Système de Vidéosurveillance Analogique': 27000,
+                    'Initiation au Réseau Informatique': 28000,
+                    'Initiation au Système de Panneau Solaire (SPS)': 28000,
+                    'Adobe Photoshop': 22000,
+                    'Adobe Première Pro': 22000,
+                    'CapCut / VN + IA (Vidéos)': 22000,
+                    'Canva + IA (Affiches)': 20000,
+                    'Sage 100 comptabilité Générale': 28000,
+                    'IMITECH (Initiation en entrepreneuriat : Business Model Canvas)': 25000,
+                    'Word et Excel': 20000,
+                    'Community Management': 23000,
+                    'Intelligence Artificielle (IA)': 32000,
+                    'Internet des Objets (IOT)': 28000,
+                    'Création d’applications (Flutter)': 33000
+                },
+                formateurIds: ['formateur_1'],
+                prix: 100000,
+                prixEnLigne: 125000,
+                type: 'mixte',
+                estStage: true,
                 maxModulesParEtudiant: 3,
-                dateDebut: { seconds: Math.floor(Date.now() / 1000) + 86400 },
-                dateFin: { seconds: Math.floor(Date.now() / 1000) + 86400 * 30 },
-                dateFinInscription: { seconds: Math.floor(Date.now() / 1000) + 86400 * 10 },
-                duree: '4 semaines',
-                niveau: 'Débutant',
-                format: 'En ligne',
-                imageUrl: 'https://via.placeholder.com/600x400?text=Formation+Test'
-            },
-        };
+                dateDebut: '2026-06-27T00:00:00.000Z',
+                dateFin: '2026-09-27T00:00:00.000Z',
+                dateFinInscription: '2026-06-17T00:00:00.000Z',
+                duree: '12 semaines',
+                niveau: 'Tous niveaux',
+                format: 'Mixte',
+                imageUrl: 'images/Malintic.png'
+            }
+        ];
+
+        function getSavedFormationsFromStorage() {
+            try {
+                const raw = localStorage.getItem('app_saved_formations');
+                if (raw) {
+                    const list = JSON.parse(raw);
+                    if (Array.isArray(list)) return list;
+                }
+            } catch (e) {}
+            return [];
+        }
+
+        async function fetchWithTimeout(url, options = {}, timeoutMs = 8000) {
+            const controller = new AbortController();
+            const timer = setTimeout(() => controller.abort(), timeoutMs);
+            try {
+                return await fetch(url, { ...options, signal: controller.signal, cache: 'no-store' });
+            } finally {
+                clearTimeout(timer);
+            }
+        }
+
+        async function fetchFormationFromBackend(id) {
+            if (id) {
+                const savedList = getSavedFormationsFromStorage();
+                const foundLocal = savedList.find(f => f.id === id);
+                if (foundLocal) return foundLocal;
+            }
+
+            if (id) {
+                try {
+                    const singleResp = await fetchWithTimeout(`/api/formations/${encodeURIComponent(id)}`);
+                    if (singleResp.ok) {
+                        const item = await singleResp.json();
+                        if (item && item.id) return item;
+                    }
+                } catch (e) {
+                    console.warn('Lecture formation par id indisponible :', e);
+                }
+            }
+
+            try {
+                const resp = await fetchWithTimeout('/api/formations');
+                if (resp.ok) {
+                    const list = await resp.json();
+                    if (Array.isArray(list)) {
+                        if (id) {
+                            const found = list.find(f => f.id === id);
+                            if (found) return found;
+                        } else if (list.length > 0) {
+                            return list[0];
+                        }
+                    }
+                }
+            } catch (e) {
+                console.warn('Lecture catalogue formations indisponible :', e);
+            }
+
+            if (id) {
+                const foundFallback = fallbackFormations.find(f => f.id === id);
+                if (foundFallback) return foundFallback;
+            }
+            return fallbackFormations[0] || null;
+        }
 
         function saveLocalInscription(inscriptionData) {
-            const key = 'local_inscriptions';
-            const existing = JSON.parse(localStorage.getItem(key) || '[]');
-            existing.push(inscriptionData);
-            localStorage.setItem(key, JSON.stringify(existing));
+            try {
+                const key1 = 'local_inscriptions';
+                const existing1 = JSON.parse(localStorage.getItem(key1) || '[]');
+                existing1.push(inscriptionData);
+                localStorage.setItem(key1, JSON.stringify(existing1));
+
+                const key2 = 'app_saved_inscriptions';
+                const existing2 = JSON.parse(localStorage.getItem(key2) || '[]');
+                existing2.push(inscriptionData);
+                localStorage.setItem(key2, JSON.stringify(existing2));
+            } catch (e) {}
         }
 
         window.closeModal = function() {
@@ -1299,16 +1406,35 @@
             const moduleCheckboxes = Array.from(document.querySelectorAll('.module-checkbox'));
             const selectedModules = moduleCheckboxes.filter(cb => cb.checked).length;
 
-            if (moduleCheckboxes.length > 0 && selectedModules === 0) {
-                alert('Veuillez sélectionner au moins un module avant de vous inscrire.');
+            const currentIsStage = window.currentFormation?.estStage === true ||
+                String(window.currentFormation?.estStage).toLowerCase() === 'true' ||
+                /\bsfp\b|stage de formation/i.test(window.currentFormation?.titre || '');
+            const requiredModules = Number(window.currentFormation?.maxModulesParEtudiant) || 3;
+            if (moduleCheckboxes.length > 0 && (currentIsStage
+                ? selectedModules !== requiredModules
+                : selectedModules === 0)) {
+                alert(currentIsStage
+                    ? `Veuillez sélectionner exactement ${requiredModules} modules.`
+                    : 'Veuillez sélectionner au moins un module avant de vous inscrire.');
                 return;
             }
             openModal();
         };
 
+        function resolveImageUrl(url) {
+            if (!url || typeof url !== 'string' || url.trim() === '') return 'images/Malintic.png';
+            const trimmed = url.trim();
+            if (trimmed.startsWith('http://') || trimmed.startsWith('https://') || trimmed.startsWith('data:image')) {
+                return trimmed;
+            }
+            const path = trimmed.startsWith('/') ? trimmed.substring(1) : trimmed;
+            return path.startsWith('images/') ? path : 'images/' + path;
+        }
+
         // Image Modal Functions
         window.openImageModal = function(imageUrl) {
-            document.getElementById('modalImage').src = imageUrl;
+            const finalUrl = resolveImageUrl(imageUrl);
+            document.getElementById('modalImage').src = finalUrl;
             document.getElementById('imageModal').classList.add('active');
         };
 
@@ -1427,20 +1553,30 @@
 
         async function loadFormation() {
             try {
-                // Prefer local test data; fallback to backend stub if available.
-                let formation = localFormations[formationId] || localFormations['test-formation'];
+                let formation = null;
+
+                if (formationId) {
+                    const savedList = getSavedFormationsFromStorage();
+                    formation = savedList.find(f => f.id === formationId);
+                    if (!formation) {
+                        formation = fallbackFormations.find(f => f.id === formationId);
+                    }
+                }
+
                 if (!formation && !localTestMode) {
                     formation = await fetchFormationFromBackend(formationId);
                 }
 
-                const formationExists = !!formation;
+                if (!formation) {
+                    formation = fallbackFormations.find(f => f.id === formationId) || fallbackFormations[0] || null;
+                }
 
-                if (!formation || !formationExists) {
+                if (!formation) {
                     document.getElementById('loading').style.display = 'none';
                     document.getElementById('app').innerHTML = `
                         <div class="error-message">
                             <h3><i class="fas fa-exclamation-circle"></i> Formation non trouvée</h3>
-                            <p>Désolé, cette formation n'existe pas.</p>
+                            <p>Désolé, cette formation n'existe pas ou les données ne sont pas accessibles.</p>
                         </div>
                     `;
                     document.getElementById('app').style.display = 'block';
@@ -1450,14 +1586,19 @@
                 renderFormation(formation);
             } catch (error) {
                 console.error('Erreur:', error);
-                document.getElementById('loading').style.display = 'none';
-                document.getElementById('app').innerHTML = `
-                    <div class="error-message">
-                        <h3><i class="fas fa-triangle-exclamation"></i> Erreur</h3>
-                        <p>Une erreur est survenue. Veuillez réessayer.</p>
-                    </div>
-                `;
-                document.getElementById('app').style.display = 'block';
+                const fallbackFormation = fallbackFormations.find(f => f.id === formationId) || fallbackFormations[0] || null;
+                if (fallbackFormation) {
+                    renderFormation(fallbackFormation);
+                } else {
+                    document.getElementById('loading').style.display = 'none';
+                    document.getElementById('app').innerHTML = `
+                        <div class="error-message">
+                            <h3><i class="fas fa-triangle-exclamation"></i> Erreur</h3>
+                            <p>Une erreur est survenue. Veuillez réessayer.</p>
+                        </div>
+                    `;
+                    document.getElementById('app').style.display = 'block';
+                }
             }
         }
 
@@ -1467,8 +1608,13 @@
             window.selectedFormationType = 'presentiel'; // Default type
             
             const modules = formation.modules || [];
-            const isStage = formation.estStage === true;
-            const maxModulesSelection = isStage && formation.maxModulesParEtudiant ? formation.maxModulesParEtudiant : formation.modules.length;
+            // Older shared records may not yet contain a boolean estStage.
+            // Detect SFP defensively so a learner is always limited to 3.
+            const isStage = formation.estStage === true ||
+                String(formation.estStage).toLowerCase() === 'true' ||
+                /\bsfp\b|stage de formation/i.test(formation.titre || '');
+            const configuredLimit = Number(formation.maxModulesParEtudiant);
+            const maxModulesSelection = isStage ? (configuredLimit || 3) : modules.length;
             const formationTypeLabel = isStage ? 'Stage (SFP)' : 'Formation';
 
             // Formatage des dates
@@ -1515,16 +1661,12 @@
                     <div class="header-content">
                         <div class="header-top">
                             <div class="header-left">
-                                ${formation.imageUrl ? `
-                                <div class="formation-image-card" onclick="openImageModal('${formation.imageUrl}')">
-                                    <img src="${formation.imageUrl}" alt="${formation.titre}">
+                                <img src="images/Malintic.png" alt="M@LINTIC" class="header-logo" onerror="this.onerror=null; this.src='images/logo.png';">
+                            </div>
+                            <div class="header-center">
+                                <div class="formation-image-card" onclick="openImageModal('${resolveImageUrl(formation.imageUrl)}')">
+                                    <img src="${resolveImageUrl(formation.imageUrl)}" alt="${formation.titre || 'Formation'}" onerror="this.onerror=null; this.src='images/Malintic.png';">
                                 </div>
-                                ` : `
-                                <div class="formation-image-placeholder">
-                                    <i class="fas fa-image"></i>
-                                </div>
-                                `}
-                                <img src="/images/Malintic.png" alt="M@LINTIC" class="header-logo">
                             </div>
                             <div class="header-right">
                                 <button class="share-button" onclick="shareFormation()">
@@ -1702,7 +1844,7 @@
             // Affiche le type de formation et, pour les stages, la limite de modules
             document.getElementById('formationTypeLabel').textContent = formationTypeLabel;
             if (isStage && formation.maxModulesParEtudiant) {
-                document.getElementById('moduleLimitMessage').textContent = `Sélectionnez jusqu'à ${maxModulesSelection} module(s).`;
+                document.getElementById('moduleLimitMessage').textContent = `Sélectionnez exactement ${maxModulesSelection} modules.`;
             } else if (modules.length > 0) {
                 document.getElementById('moduleLimitMessage').textContent = `Sélectionnez au moins 1 module.`;
             } else {
@@ -1718,12 +1860,17 @@
                 const enrollBtn = document.getElementById('enrollButton');
 
                 const modulesAvailable = moduleCheckboxes.length > 0;
-                const isValidSelection = modulesAvailable ? selectedModules > 0 && selectedModules <= maxModulesSelection : true;
+                const isValidSelection = modulesAvailable
+                    ? (isStage ? selectedModules === maxModulesSelection : selectedModules > 0 && selectedModules <= maxModulesSelection)
+                    : true;
                 submitBtn.disabled = !isValidSelection;
                 if (enrollBtn) enrollBtn.disabled = !isValidSelection;
 
                 if (isValidSelection) {
                     validationMsg.classList.remove('show');
+                } else if (isStage) {
+                    validationMsg.textContent = `Le stage SFP exige exactement ${maxModulesSelection} modules`;
+                    validationMsg.classList.add('show');
                 } else if (selectedModules === 0) {
                     validationMsg.textContent = 'Veuillez sélectionner au moins un module';
                     validationMsg.classList.add('show');
@@ -1757,7 +1904,11 @@
 
                 const selectedType = window.selectedFormationType || 'presentiel';
 
-                if (selectedModules.length === 0) {
+                if (isStage && selectedModules.length !== maxModulesSelection) {
+                    alert(`Le stage SFP exige exactement ${maxModulesSelection} modules.`);
+                    return;
+                }
+                if (!isStage && selectedModules.length === 0) {
                     alert('Veuillez sélectionner au moins un module!');
                     return;
                 }
@@ -1767,6 +1918,16 @@
                 const email = document.getElementById('email').value;
                 const telephone = document.getElementById('telephone').value;
                 const description = document.getElementById('description').value;
+                const modulePrices = formation.modulePrices || {};
+                const moduleTotal = selectedModules.reduce(
+                    (total, module) => total + (Number(modulePrices[module]) || 0),
+                    0,
+                );
+                const montant = moduleTotal > 0
+                    ? moduleTotal
+                    : (selectedType === 'enligne'
+                        ? Number(formation.prixEnLigne || formation.prix || 0)
+                        : Number(formation.prix || 0));
 
                 try {
                     const etudiantId = `web_${Date.now()}`;
@@ -1778,6 +1939,7 @@
                         telephone,
                         formationId: formationId,
                         modules: selectedModules,
+                        montant,
                         description,
                         statut: 'en_attente',
                         dateInscription: new Date().toISOString(),

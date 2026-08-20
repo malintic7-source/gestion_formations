@@ -2,23 +2,88 @@ services:
   gestion_formations:
     build:
       context: .
-      dockerfile: Dockerfile
-    image: gestion_formations_app:latest
+      dockerfile: Dockerfile.fast
     container_name: gestion_formations_app
     ports:
       - "8080:80"
-    restart: always
+    restart: unless-stopped
+    init: true
+    stop_grace_period: 15s
+    environment:
+      - NGINX_HOST=localhost
+      - NGINX_PORT=80
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1/ || exit 1"]
+      interval: 20s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    depends_on:
+      api:
+        condition: service_healthy
+    networks:
+      - gestion_formations_network
+
   api:
     build:
       context: ./server
       dockerfile: Dockerfile
-    image: gestion_formations_api:latest
     container_name: gestion_formations_api
+    restart: unless-stopped
+    init: true
+    env_file:
+      - .env
+    environment:
+      - NODE_ENV=production
+      - PORT=5001
     volumes:
-      - inscriptions_data:/data
+      - gestion_formations_data:/data
     expose:
       - "5001"
-    restart: always
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"fetch('http://127.0.0.1:5001/api/health').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))\""]
+      interval: 20s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    networks:
+      - gestion_formations_network
+
+  ngrok:
+    image: ngrok/ngrok:latest
+    container_name: gestion_formations_ngrok
+    restart: unless-stopped
+    init: true
+    depends_on:
+      gestion_formations:
+        condition: service_healthy
+    ports:
+      - "4040:4040"
+    environment:
+      NGROK_AUTHTOKEN: ${NGROK_AUTHTOKEN:?Ajoutez NGROK_AUTHTOKEN dans le fichier .env}
+      NGROK_DOMAIN: ${NGROK_DOMAIN:-boil-prude-curry.ngrok-free.dev}
+    command: http --domain=${NGROK_DOMAIN:-boil-prude-curry.ngrok-free.dev} http://gestion_formations:80
+    networks:
+      - gestion_formations_network
+
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: gestion_formations_tunnel
+    restart: unless-stopped
+    init: true
+    depends_on:
+      gestion_formations:
+        condition: service_healthy
+    environment:
+      TUNNEL_TOKEN: ${CLOUDFLARE_TUNNEL_TOKEN}
+    command: tunnel --no-autoupdate run --token ${CLOUDFLARE_TUNNEL_TOKEN}
+    networks:
+      - gestion_formations_network
 
 volumes:
-  inscriptions_data:
+  gestion_formations_data:
+    driver: local
+
+networks:
+  gestion_formations_network:
+    driver: bridge

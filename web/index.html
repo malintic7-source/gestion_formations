@@ -19,21 +19,21 @@
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
   <meta name="description" content="Gestion des formations M@LINTIC - Plateforme complète de gestion et suivi des formations professionnelles">
-  <meta name="theme-color" content="#6366F1">
+  <meta name="theme-color" content="#0066CC">
 
   <!-- Open Graph Tags -->
-  <meta property="og:title" content="Gestion des formations - M@LINTIC">
-  <meta property="og:description" content="Plateforme complète de gestion et suivi des formations professionnelles M@LINTIC">
-  <meta property="og:image" content="https://formations-malintic.web.app/images/Malintic.png">
-  <meta property="og:url" content="https://formations-malintic.web.app/">
+  <meta property="og:title" content="Malintic">
+  <meta property="og:description" content="Plateforme complète de gestion et suivi des formations professionnelles Malintic">
+  <meta property="og:image" content="https://malintic.web.app/images/Malintic.png">
+  <meta property="og:url" content="https://malintic.web.app/">
   <meta property="og:type" content="website">
-  <meta property="og:site_name" content="Gestion Formations M@LINTIC">
+  <meta property="og:site_name" content="Malintic">
 
   <!-- Twitter Card -->
   <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="Gestion des formations - M@LINTIC">
-  <meta name="twitter:description" content="Plateforme complète de gestion et suivi des formations professionnelles">
-  <meta name="twitter:image" content="https://formations-malintic.web.app/images/Malintic.png">
+  <meta name="twitter:title" content="Malintic">
+  <meta name="twitter:description" content="Plateforme complète de gestion et suivi des formations professionnelles Malintic">
+  <meta name="twitter:image" content="https://malintic.web.app/images/Malintic.png">
 
   <!-- iOS meta tags & icons -->
   <meta name="mobile-web-app-capable" content="yes">
@@ -44,7 +44,7 @@
   <!-- Favicon -->
   <link rel="icon" type="image/png" href="images/Malintic.png"/>
 
-  <title>Gestion des formations - M@LINTIC</title>
+  <title>Malintic</title>
   <link rel="manifest" href="manifest.json">
 </head>
 <body>
@@ -173,7 +173,6 @@
 
       <div class="loader-text">
         <div class="loader-title">M@LI-NTIC</div>
-        <div class="loader-subtitle">Gestion Formations</div>
       </div>
 
       <div class="progress-wrapper">
@@ -196,17 +195,24 @@
     * https://docs.flutter.dev/platform-integration/web/initialization
   -->
   <script>
+    // This marker is stored per browser tab, unlike cookies which are shared
+    // by all tabs. Only a tab that logged in can invalidate a session on exit.
+    window.malinticActivateTabSession = function() {
+      sessionStorage.setItem('malintic_authenticated_tab', '1');
+    };
+    window.malinticDeactivateTabSession = function() {
+      sessionStorage.removeItem('malintic_authenticated_tab');
+    };
+
     window.addEventListener('load', function() {
-      setTimeout(function() {
-        const loadingScreen = document.getElementById('loading-screen');
-        if (loadingScreen) {
-          loadingScreen.style.transition = 'opacity 0.6s cubic-bezier(0.4, 0, 0.2, 1)';
-          loadingScreen.style.opacity = '0';
-          setTimeout(function() {
-            loadingScreen.style.display = 'none';
-          }, 600);
-        }
-      }, 800);
+      const loadingScreen = document.getElementById('loading-screen');
+      if (loadingScreen) {
+        loadingScreen.style.transition = 'opacity 0.3s ease-out';
+        loadingScreen.style.opacity = '0';
+        setTimeout(function() {
+          loadingScreen.style.display = 'none';
+        }, 300);
+      }
     });
   </script>
   <script src="flutter_bootstrap.js" async></script>

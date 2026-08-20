@@ -10,11 +10,21 @@ class Horaire {
   final String jour;
   final String heureDebut;
   final String heureFin;
+  /// Null means that the session is shared by every enrolled module.
+  final String? module;
+  /// A named cohort (for example "SFP-BDIA-A"). Empty/null means all groups.
+  final String? groupe;
+  final String? modalite;
+  final String? lieuOuLien;
 
   Horaire({
     required this.jour,
     required this.heureDebut,
     required this.heureFin,
+    this.module,
+    this.groupe,
+    this.modalite,
+    this.lieuOuLien,
   });
 
   factory Horaire.fromMap(Map<String, dynamic> map) {
@@ -22,6 +32,10 @@ class Horaire {
       jour: map['jour'] ?? '',
       heureDebut: map['heureDebut'] ?? '',
       heureFin: map['heureFin'] ?? '',
+      module: map['module']?.toString(),
+      groupe: map['groupe']?.toString(),
+      modalite: map['modalite']?.toString(),
+      lieuOuLien: map['lieuOuLien']?.toString(),
     );
   }
 
@@ -30,6 +44,10 @@ class Horaire {
       'jour': jour,
       'heureDebut': heureDebut,
       'heureFin': heureFin,
+      'module': module,
+      'groupe': groupe,
+      'modalite': modalite,
+      'lieuOuLien': lieuOuLien,
     };
   }
 }
@@ -39,6 +57,10 @@ class Formation {
   final String titre;
   final String description;
   final List<String> modules;
+  final Map<String, double> modulePrices;
+  /// Associates each module title with the id of the trainer responsible for it.
+  /// A module without an entry is deliberately kept unassigned.
+  final Map<String, String> moduleFormateurIds;
   final List<String> modulesBonus;
   final String? imageUrl;
   final ImageFormat? imageFormat;
@@ -63,6 +85,8 @@ class Formation {
     required this.titre,
     required this.description,
     required this.modules,
+    this.modulePrices = const {},
+    this.moduleFormateurIds = const {},
     this.modulesBonus = const [],
     this.imageUrl,
     this.imageFormat,
@@ -114,6 +138,11 @@ class Formation {
     DateTime? parseDate(dynamic val) {
       if (val == null) return null;
       if (val is DateTime) return val;
+      if (val != null && val.runtimeType.toString().contains('Timestamp')) {
+        try {
+          return (val as dynamic).toDate();
+        } catch (_) {}
+      }
       if (val is String) return DateTime.tryParse(val);
       return null;
     }
@@ -123,6 +152,11 @@ class Formation {
       titre: data['titre'] ?? '',
       description: data['description'] ?? '',
       modules: List<String>.from(data['modules'] ?? []),
+      modulePrices: (data['modulePrices'] as Map<dynamic, dynamic>? ?? {})
+          .map((key, value) => MapEntry(key.toString(), (value as num).toDouble())),
+      moduleFormateurIds:
+          (data['moduleFormateurIds'] as Map<dynamic, dynamic>? ?? {})
+              .map((key, value) => MapEntry(key.toString(), value.toString())),
       modulesBonus: List<String>.from(data['modulesBonus'] ?? []),
       imageUrl: data['imageUrl'],
       imageFormat: parseImageFormat(data['imageFormat']),
@@ -161,6 +195,8 @@ class Formation {
       'titre': titre,
       'description': description,
       'modules': modules,
+      'modulePrices': modulePrices,
+      'moduleFormateurIds': moduleFormateurIds,
       'modulesBonus': modulesBonus,
       'imageUrl': imageUrl,
       'imageFormat': imageFormat?.toString(),
@@ -183,6 +219,60 @@ class Formation {
   }
 
   Map<String, dynamic> toFirestore() => toMap();
+
+  Formation copyWith({
+    String? id,
+    String? titre,
+    String? description,
+    List<String>? modules,
+    Map<String, double>? modulePrices,
+    Map<String, String>? moduleFormateurIds,
+    List<String>? modulesBonus,
+    String? imageUrl,
+    ImageFormat? imageFormat,
+    List<String>? formateurIds,
+    double? prix,
+    double? prixEnLigne,
+    FormationType? type,
+    FormationStatus? status,
+    int? dureeSemaines,
+    String? dureeHeures,
+    List<Horaire>? horaires,
+    DateTime? dateDebut,
+    DateTime? dateFin,
+    DateTime? dateCreation,
+    int? capaciteMax,
+    int? nombreInscrits,
+    bool? estStage,
+    int? maxModulesParEtudiant,
+  }) {
+    return Formation(
+      id: id ?? this.id,
+      titre: titre ?? this.titre,
+      description: description ?? this.description,
+      modules: modules ?? this.modules,
+      modulePrices: modulePrices ?? this.modulePrices,
+      moduleFormateurIds: moduleFormateurIds ?? this.moduleFormateurIds,
+      modulesBonus: modulesBonus ?? this.modulesBonus,
+      imageUrl: imageUrl ?? this.imageUrl,
+      imageFormat: imageFormat ?? this.imageFormat,
+      formateurIds: formateurIds ?? this.formateurIds,
+      prix: prix ?? this.prix,
+      prixEnLigne: prixEnLigne ?? this.prixEnLigne,
+      type: type ?? this.type,
+      status: status ?? this.status,
+      dureeSemaines: dureeSemaines ?? this.dureeSemaines,
+      dureeHeures: dureeHeures ?? this.dureeHeures,
+      horaires: horaires ?? this.horaires,
+      dateDebut: dateDebut ?? this.dateDebut,
+      dateFin: dateFin ?? this.dateFin,
+      dateCreation: dateCreation ?? this.dateCreation,
+      capaciteMax: capaciteMax ?? this.capaciteMax,
+      nombreInscrits: nombreInscrits ?? this.nombreInscrits,
+      estStage: estStage ?? this.estStage,
+      maxModulesParEtudiant: maxModulesParEtudiant ?? this.maxModulesParEtudiant,
+    );
+  }
 
   @override
   bool operator ==(Object other) =>

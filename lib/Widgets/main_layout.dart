@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:gestion_formations/Models/user.dart';
 import 'package:gestion_formations/Pages/Login/welcom_page.dart';
+import 'package:gestion_formations/Pages/Screens/notifications.dart';
 import 'package:gestion_formations/Services/auth_provider.dart';
 import 'package:gestion_formations/Services/notifications_services.dart';
 import 'package:gestion_formations/config/theme.dart';
@@ -13,6 +14,7 @@ class MainLayout extends StatefulWidget {
   final Function(int)? onNavigationChanged;
   final List<NavigationItem> navigationItems;
   final User? user;
+  final bool showPageHeader;
 
   const MainLayout({
     super.key,
@@ -22,6 +24,7 @@ class MainLayout extends StatefulWidget {
     this.onNavigationChanged,
     required this.navigationItems,
     this.user,
+    this.showPageHeader = false,
   });
 
   @override
@@ -43,206 +46,251 @@ class _MainLayoutState extends State<MainLayout> with TickerProviderStateMixin {
   }
 
   @override
+  void didUpdateWidget(covariant MainLayout oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.selectedIndex != null && widget.selectedIndex != _selectedIndex) {
+      setState(() => _selectedIndex = widget.selectedIndex!);
+    }
+  }
+
+  @override
   void dispose() {
     _notificationAnimationController.dispose();
     super.dispose();
   }
 
+  // Bottom nav items for mobile: 3 priority tabs + drawer "Plus"
+  static const _adminBottomNavIndices = [0, 1, 3]; // Dashboard, Formations, Inscriptions
+  static const _adminBottomNavLabels = ['Accueil', 'Formations', 'Inscriptions'];
+  static const _adminBottomNavIcons = [
+    Icons.dashboard_rounded,
+    Icons.school_rounded,
+    Icons.receipt_long_rounded,
+  ];
+
+  int? _getBottomNavSelected() {
+    final idx = _adminBottomNavIndices.indexOf(_selectedIndex);
+    return idx >= 0 ? idx : null;
+  }
+
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
-    final isMobile = size.width < 768;
+    final isMobile = size.width < 600;
+    final isSmallTablet = size.width >= 600 && size.width < 768;
+    final isMobileOrSmall = isMobile || isSmallTablet;
     final isTablet = size.width >= 768 && size.width < 1100;
+    final isAdminRole = widget.navigationItems.length >= 8;
+    final useBottomNav = isMobileOrSmall && isAdminRole;
+    final bottomNavSelected = _getBottomNavSelected();
 
     return Scaffold(
       backgroundColor: AppTheme.background,
-      appBar: AppBar(
-        elevation: 0,
-        // slightly larger header to fit the bigger logo and profile brand
-        toolbarHeight: isMobile ? 44 : 54,
-        titleSpacing: isMobile ? 0 : 8,
-        // larger left logo area for better visibility
-        leadingWidth: isMobile ? 60 : 92,
-        backgroundColor: Colors.transparent,
-        surfaceTintColor: Colors.transparent,
-        // apply stronger blue-red gradient from theme
-        flexibleSpace: Stack(
+      appBar: null,
+      drawer: isMobileOrSmall ? _buildDrawer(context) : null,
+      bottomNavigationBar: useBottomNav
+          ? _buildBottomNav(context, bottomNavSelected)
+          : null,
+      body: SafeArea(
+        bottom: !useBottomNav,
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Container(
-              decoration: BoxDecoration(
-                gradient: AppTheme.heroGradient,
-              ),
-            ),
-            Positioned(
-              left: 0,
-              right: 0,
-              bottom: 0,
-              child: Container(
-                height: 4,
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [AppTheme.logoRed, AppTheme.primary, AppTheme.logoRed],
-                    begin: Alignment.centerLeft,
-                    end: Alignment.centerRight,
-                  ),
+            if (!isMobileOrSmall) _buildSidebar(context, isTablet: isTablet),
+            Expanded(
+              child: Padding(
+                padding: EdgeInsets.only(
+                  left: isMobile ? 8 : isSmallTablet ? 10 : 16,
+                  right: isMobile ? 8 : isSmallTablet ? 10 : 16,
+                  top: isMobile ? 8 : 12,
+                  bottom: isMobile ? 4 : 16,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (isMobileOrSmall) _buildMobileTopBar(context, isMobile),
+                    if (widget.showPageHeader) _buildPageHeader(isMobileOrSmall),
+                    Expanded(
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: isMobile ? Colors.transparent : AppTheme.surface,
+                          borderRadius: BorderRadius.circular(isMobile ? 12 : 24),
+                          border: isMobile
+                              ? null
+                              : Border.all(color: const Color(0xFFF1F5F9), width: 1.5),
+                          boxShadow: isMobile ? null : AppTheme.cardShadow,
+                        ),
+                        clipBehavior: Clip.hardEdge,
+                        child: widget.child,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
           ],
         ),
-        leading: isMobile
-            ? Builder(
-                builder: (context) => IconButton(
-                  icon: const Icon(Icons.menu_rounded, color: Colors.white, size: 22),
-                  onPressed: () => Scaffold.of(context).openDrawer(),
+      ),
+    );
+  }
+
+  Widget _buildMobileTopBar(BuildContext context, bool isMobile) {
+    return Builder(
+      builder: (ctx) => Padding(
+        padding: const EdgeInsets.only(bottom: 8.0),
+        child: Row(
+          children: [
+            InkWell(
+              borderRadius: BorderRadius.circular(10),
+              onTap: () => Scaffold.of(ctx).openDrawer(),
+              child: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: AppTheme.primary.withValues(alpha: 0.10),
+                  borderRadius: BorderRadius.circular(10),
                 ),
-              )
-            : Padding(
-                padding: const EdgeInsets.only(left: 16, right: 8, top: 4, bottom: 4),
-                child: Center(
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.18),
-                      borderRadius: BorderRadius.circular(18),
-                    ),
-                    padding: const EdgeInsets.all(6),
-                    child: Image.asset(
-                      'images/logo.png',
-                      fit: BoxFit.contain,
-                      width: isMobile ? 56 : 76,
-                      height: isMobile ? 56 : 76,
-                    ),
-                  ),
-                ),
+                child: const Icon(Icons.menu_rounded, color: AppTheme.primary, size: 22),
               ),
-        title: ConstrainedBox(
-          constraints: BoxConstraints(maxWidth: size.width - (isMobile ? 120 : 160)),
-          child: Text(
-            widget.title,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: GoogleFonts.poppins(
-              fontSize: isMobile ? 12 : 14,
-              fontWeight: FontWeight.w700,
-              color: Colors.white,
             ),
-          ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                widget.title,
+                style: GoogleFonts.poppins(
+                  fontSize: isMobile ? 16 : 18,
+                  fontWeight: FontWeight.w700,
+                  color: AppTheme.textPrimary,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            _buildNotificationBell(context),
+            const SizedBox(width: 8),
+            // Logo mini
+            Container(
+              width: 32,
+              height: 32,
+              padding: const EdgeInsets.all(3),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(8),
+                boxShadow: AppTheme.softShadow,
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(5),
+                child: Image.asset('images/logo.png', fit: BoxFit.contain),
+              ),
+            ),
+          ],
         ),
-        actions: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 4),
-            child: StreamBuilder<List<dynamic>>(
-              stream: _getUnreadNotificationsStream(),
-              builder: (context, snapshot) {
-                final unreadCount = _countUnreadNotifications(snapshot.data ?? []);
-                return Stack(
-                  children: [
-                    IconButton(
-                      icon: const Icon(Icons.notifications_none_rounded, color: Colors.white, size: 24),
-                      onPressed: () => _navigateToNotifications(),
-                    ),
-                    if (unreadCount > 0)
-                      Positioned(
-                        right: 8,
-                        top: 8,
-                        child: AnimatedBuilder(
-                          animation: _notificationAnimationController,
-                          builder: (context, child) {
-                            return Container(
-                              width: 10,
-                              height: 10,
-                              decoration: BoxDecoration(
-                                color: AppTheme.error,
-                                shape: BoxShape.circle,
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: AppTheme.error.withValues(
-                                      alpha: Curves.easeInOut.transform(_notificationAnimationController.value) * 0.4,
-                                    ),
-                                    blurRadius: 6,
-                                    spreadRadius: 2,
-                                  ),
-                                ],
-                              ),
-                            );
-                          },
-                        ),
-                      ),
-                  ],
-                );
-              },
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.only(right: 16, left: 4, top: 2, bottom: 2),
-            child: GestureDetector(
-              onTap: () {
-                final profileIndex = widget.navigationItems.indexWhere(
-                  (item) => item.label.toLowerCase().contains('profil'),
-                );
-                if (profileIndex >= 0) {
-                  setState(() => _selectedIndex = profileIndex);
-                  widget.onNavigationChanged?.call(profileIndex);
-                }
-              },
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Container(
-                    width: 44,
-                    height: 44,
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(14),
-                      boxShadow: AppTheme.softShadow,
-                    ),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(14),
-                      child: Image.asset(
-                        'images/logo.png',
-                        fit: BoxFit.contain,
-                        width: 40,
-                        height: 40,
-                        color: AppTheme.primary,
-                        colorBlendMode: BlendMode.srcIn,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    widget.user?.nomComplet.isNotEmpty == true
-                        ? widget.user!.nomComplet.split(' ').first
-                        : 'Profil',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: GoogleFonts.poppins(
-                      color: Colors.white,
-                      fontSize: 10,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
-              ),
-            ),
+      ),
+    );
+  }
+
+  Widget _buildBottomNav(BuildContext context, int? selected) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF0F172A).withValues(alpha: 0.10),
+            blurRadius: 20,
+            offset: const Offset(0, -4),
           ),
         ],
       ),
-      drawer: isMobile ? _buildDrawer(context) : null,
-      body: Row(
-        children: [
-          if (!isMobile) _buildSidebar(context, isTablet: isTablet),
-          Expanded(
-            child: Padding(
-              padding: EdgeInsets.only(
-                left: isMobile ? 0 : 16,
-                right: 16,
-                top: 16,
-                bottom: 16,
+      child: SafeArea(
+        top: false,
+        child: Container(
+          height: 60,
+          padding: const EdgeInsets.symmetric(horizontal: 6),
+          child: Row(
+            children: [
+              ...List.generate(_adminBottomNavLabels.length, (i) {
+                final isSelected = selected == i;
+                return Expanded(
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(12),
+                    onTap: () {
+                      final pageIdx = _adminBottomNavIndices[i];
+                      setState(() => _selectedIndex = pageIdx);
+                      widget.onNavigationChanged?.call(pageIdx);
+                    },
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        AnimatedContainer(
+                          duration: const Duration(milliseconds: 200),
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 3),
+                          decoration: isSelected
+                              ? BoxDecoration(
+                                  color: AppTheme.primary.withValues(alpha: 0.12),
+                                  borderRadius: BorderRadius.circular(10),
+                                )
+                              : null,
+                          child: Icon(
+                            _adminBottomNavIcons[i],
+                            size: 20,
+                            color: isSelected ? AppTheme.primary : AppTheme.textSecondary,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          _adminBottomNavLabels[i],
+                          style: GoogleFonts.poppins(
+                            fontSize: 10,
+                            fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                            color: isSelected ? AppTheme.primary : AppTheme.textSecondary,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }),
+              Builder(
+                builder: (ctx) => Expanded(
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(12),
+                    onTap: () => Scaffold.of(ctx).openDrawer(),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 3),
+                          decoration: selected == null
+                              ? BoxDecoration(
+                                  color: AppTheme.primary.withValues(alpha: 0.12),
+                                  borderRadius: BorderRadius.circular(10),
+                                )
+                              : null,
+                          child: Icon(
+                            Icons.more_horiz_rounded,
+                            size: 20,
+                            color: selected == null ? AppTheme.primary : AppTheme.textSecondary,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          'Plus',
+                          style: GoogleFonts.poppins(
+                            fontSize: 10,
+                            fontWeight: selected == null ? FontWeight.w700 : FontWeight.w500,
+                            color: selected == null ? AppTheme.primary : AppTheme.textSecondary,
+                          ),
+                          maxLines: 1,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
               ),
-              child: widget.child,
-            ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
@@ -339,29 +387,34 @@ class _MainLayoutState extends State<MainLayout> with TickerProviderStateMixin {
                             borderRadius: BorderRadius.circular(12),
                           )
                         : null,
-                    child: ListTile(
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      dense: true,
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 2),
-                      leading: Icon(
-                        item.icon,
-                        color: isSelected ? AppTheme.primary : AppTheme.textSecondary,
-                        size: 22,
-                      ),
-                      title: Text(
-                        item.label,
-                        style: GoogleFonts.poppins(
-                          fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                          color: isSelected ? AppTheme.primary : AppTheme.textPrimary,
-                          fontSize: 14,
+                    child: Material(
+                      color: Colors.transparent,
+                      child: ListTile(
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        dense: true,
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 2),
+                        tileColor: isSelected ? AppTheme.surface.withValues(alpha: 0.08) : null,
+                        selectedTileColor: AppTheme.primary.withValues(alpha: 0.1),
+                        leading: Icon(
+                          item.icon,
+                          color: isSelected ? AppTheme.primary : AppTheme.textSecondary,
+                          size: 22,
                         ),
+                        title: Text(
+                          item.label,
+                          style: GoogleFonts.poppins(
+                            fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                            color: isSelected ? AppTheme.primary : AppTheme.textPrimary,
+                            fontSize: 14,
+                          ),
+                        ),
+                        selected: isSelected,
+                        onTap: () {
+                          setState(() => _selectedIndex = index);
+                          widget.onNavigationChanged?.call(index);
+                          Navigator.pop(context);
+                        },
                       ),
-                      selected: isSelected,
-                      onTap: () {
-                        setState(() => _selectedIndex = index);
-                        widget.onNavigationChanged?.call(index);
-                        Navigator.pop(context);
-                      },
                     ),
                   ),
                 );
@@ -404,6 +457,147 @@ class _MainLayoutState extends State<MainLayout> with TickerProviderStateMixin {
     );
   }
 
+  Widget _buildPageHeader(bool isMobile) {
+    final description = 'Interface claire et structurée pour chaque section.';
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+      decoration: BoxDecoration(
+        color: AppTheme.surface,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        boxShadow: AppTheme.cardShadow,
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  widget.title,
+                  style: GoogleFonts.poppins(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w800,
+                    color: AppTheme.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  description,
+                  style: GoogleFonts.poppins(
+                    fontSize: 13,
+                    color: AppTheme.textSecondary,
+                    height: 1.5,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          if (!isMobile) ...[
+            _buildNotificationBell(context),
+            const SizedBox(width: 10),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: AppTheme.primary.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: const Icon(
+                Icons.workspace_premium_rounded,
+                color: AppTheme.primary,
+                size: 26,
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildNotificationBell(BuildContext context) {
+    if (widget.user == null) return const SizedBox.shrink();
+
+    return StreamBuilder<int>(
+      stream: NotificationsService().watchUnreadCountForUser(
+        userId: widget.user!.id,
+        userEmail: widget.user!.email,
+        userRole: widget.user!.role.toString(),
+      ),
+      builder: (context, snapshot) {
+        final unreadCount = snapshot.data ?? 0;
+
+        return Stack(
+          clipBehavior: Clip.none,
+          children: [
+            Material(
+              color: Colors.transparent,
+              child: InkWell(
+                borderRadius: BorderRadius.circular(10),
+                onTap: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (context) => Scaffold(
+                        appBar: AppBar(
+                          title: Text(
+                            'Centre de notifications',
+                            style: GoogleFonts.poppins(fontWeight: FontWeight.w700, fontSize: 16),
+                          ),
+                          backgroundColor: AppTheme.surface,
+                          elevation: 0,
+                          iconTheme: const IconThemeData(color: AppTheme.textPrimary),
+                        ),
+                        body: NotificationsPage(user: widget.user!),
+                      ),
+                    ),
+                  );
+                },
+                child: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: unreadCount > 0
+                        ? AppTheme.primary.withValues(alpha: 0.12)
+                        : Colors.grey.shade100,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(
+                    unreadCount > 0 ? Icons.notifications_active_rounded : Icons.notifications_none_rounded,
+                    color: unreadCount > 0 ? AppTheme.primary : Colors.black54,
+                    size: 20,
+                  ),
+                ),
+              ),
+            ),
+            if (unreadCount > 0)
+              Positioned(
+                right: -2,
+                top: -2,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFEF4444),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: Colors.white, width: 1.5),
+                  ),
+                  constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
+                  child: Text(
+                    unreadCount > 9 ? '9+' : '$unreadCount',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 9,
+                      fontWeight: FontWeight.w800,
+                      height: 1.0,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              ),
+          ],
+        );
+      },
+    );
+  }
+
   Widget _buildSidebar(BuildContext context, {required bool isTablet}) {
     final width = MediaQuery.of(context).size.width;
     final sidebarWidth = width < 900 ? 72.0 : width < 1100 ? 110.0 : 220.0;
@@ -417,50 +611,36 @@ class _MainLayoutState extends State<MainLayout> with TickerProviderStateMixin {
       ),
       child: Column(
         children: [
+          // Adjusted header height and padding to avoid overflow while keeping
+          // the logo visually higher than before.
           Container(
-            height: showUserInfo ? 122 : 64,
-            decoration: BoxDecoration(
-              gradient: AppTheme.heroGradient,
-              boxShadow: AppTheme.softShadow,
-            ),
+            // Allow the sidebar header to compress gracefully in narrow views.
+            constraints: BoxConstraints(maxHeight: showUserInfo ? 160 : 100),
             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
             child: Column(
+              mainAxisSize: MainAxisSize.min,
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 Container(
-                  padding: const EdgeInsets.all(2),
+                  width: showLabel ? 110 : 70,
+                  height: showLabel ? 110 : 70,
+                  padding: const EdgeInsets.all(6),
                   decoration: BoxDecoration(
-                    border: Border.all(color: Colors.white, width: 2),
-                    borderRadius: BorderRadius.circular(20),
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: AppTheme.softShadow,
                   ),
-                  child: CircleAvatar(
-                      radius: showLabel ? 28 : 18,
-                      backgroundColor: Colors.white,
-                      child: Text(
-                        widget.user?.nomComplet.isNotEmpty == true ? widget.user!.nomComplet[0].toUpperCase() : 'U',
-                        style: GoogleFonts.poppins(
-                          fontSize: showLabel ? 22 : 16,
-                          fontWeight: FontWeight.w800,
-                          color: AppTheme.primary,
-                        ),
-                      ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(10),
+                    child: Image.asset(
+                      'images/logo.png',
+                      fit: BoxFit.contain,
                     ),
+                  ),
                 ),
                 if (showUserInfo) ...[
-                  const SizedBox(height: 4),
-                  Text(
-                    widget.user?.nomComplet ?? 'Utilisateur',
-                    style: GoogleFonts.poppins(
-                      fontWeight: FontWeight.w700,
-                      fontSize: 11,
-                      color: Colors.white,
-                    ),
-                    textAlign: TextAlign.center,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 2),
+                  const SizedBox(height: 6),
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                     decoration: BoxDecoration(
@@ -510,16 +690,15 @@ class _MainLayoutState extends State<MainLayout> with TickerProviderStateMixin {
                         minLeadingWidth: 0,
                                 leading: Icon(
                                   item.icon,
-                                  // on colored sidebar, use white icons by default
-                                  color: isSelected ? AppTheme.accent : Colors.white,
+                                  color: isSelected ? Colors.white : Colors.white.withValues(alpha: 0.8),
                                   size: showLabel ? 18 : 22,
                                 ),
                         title: showLabel
                             ? Text(
                                 item.label,
                                 style: GoogleFonts.poppins(
-                                  fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                                    color: isSelected ? AppTheme.accent : Colors.white,
+                                  fontWeight: isSelected ? FontWeight.w800 : FontWeight.w500,
+                                  color: isSelected ? Colors.white : Colors.white.withValues(alpha: 0.8),
                                   fontSize: 12,
                                 ),
                               )
@@ -579,37 +758,6 @@ class _MainLayoutState extends State<MainLayout> with TickerProviderStateMixin {
         ],
       ),
     );
-  }
-
-  Stream<List<dynamic>> _getUnreadNotificationsStream() {
-    if (widget.user == null) return Stream.value([]);
-    return NotificationsService().watchNotificationsForUser(
-      userId: widget.user!.id,
-      userEmail: widget.user!.email,
-      userRole: widget.user!.role.toString(),
-    );
-  }
-
-  int _countUnreadNotifications(List<dynamic> notifications) {
-    int count = 0;
-    for (final notif in notifications) {
-      if (notif.readBy != null && notif.readBy is List) {
-        if (!notif.readBy.contains(widget.user?.id)) {
-          count++;
-        }
-      }
-    }
-    return count;
-  }
-
-  void _navigateToNotifications() {
-    final notificationIndex = widget.navigationItems.indexWhere(
-      (item) => item.label.toLowerCase().contains('notification'),
-    );
-    if (notificationIndex >= 0) {
-      setState(() => _selectedIndex = notificationIndex);
-      widget.onNavigationChanged?.call(notificationIndex);
-    }
   }
 }
 

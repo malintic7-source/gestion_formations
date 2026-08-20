@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
@@ -7,12 +6,11 @@ import 'package:animate_do/animate_do.dart';
 import 'package:gestion_formations/Models/user.dart';
 import 'package:gestion_formations/Models/formation.dart';
 import 'package:gestion_formations/Services/db_services.dart';
+import 'package:gestion_formations/config/theme.dart';
+import 'package:gestion_formations/utils/share_helper.dart';
 import 'package:qr_flutter/qr_flutter.dart';
-import 'package:share_plus/share_plus.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter/services.dart';
-import 'package:gestion_formations/config/theme.dart';
 
 class DiscoverFormationsPage extends StatefulWidget {
   final User user;
@@ -61,13 +59,21 @@ class _DiscoverFormationsPageState extends State<DiscoverFormationsPage> with Ti
 
   @override
   Widget build(BuildContext context) {
+    final width = MediaQuery.of(context).size.width;
+    final maxWidth = width > 1200 ? 1100.0 : width * 0.95;
+
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
         leading: IconButton(
           icon: Icon(Icons.arrow_back_rounded, color: AppTheme.primary),
-          onPressed: () => Navigator.pop(context),
+          tooltip: 'Retour',
+          onPressed: () {
+            if (Navigator.of(context).canPop()) {
+              Navigator.of(context).pop();
+            }
+          },
         ),
         title: Text(
           'Découvrir',
@@ -77,6 +83,17 @@ class _DiscoverFormationsPageState extends State<DiscoverFormationsPage> with Ti
             color: Colors.black87,
           ),
         ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.close_rounded, color: AppTheme.primary),
+            tooltip: 'Fermer',
+            onPressed: () {
+              if (Navigator.of(context).canPop()) {
+                Navigator.of(context).pop();
+              }
+            },
+          ),
+        ],
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: _contactAssistance,
@@ -84,20 +101,33 @@ class _DiscoverFormationsPageState extends State<DiscoverFormationsPage> with Ti
         elevation: 8,
         child: Icon(Icons.support_agent_rounded, color: Colors.white),
       ),
-      body: SingleChildScrollView(
-        padding: EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildHeader(),
-            SizedBox(height: 28),
-            _buildSearchBar(),
-            SizedBox(height: 20),
-            _buildFilters(),
-            SizedBox(height: 24),
-            _buildFormationsList(context),
-            SizedBox(height: 80),
-          ],
+      body: Center(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(maxWidth: maxWidth),
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+            child: Container(
+              decoration: BoxDecoration(
+                color: AppTheme.surface,
+                borderRadius: BorderRadius.circular(24),
+                boxShadow: AppTheme.cardShadow,
+              ),
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildHeader(),
+                  const SizedBox(height: 28),
+                  _buildSearchBar(),
+                  const SizedBox(height: 20),
+                  _buildFilters(),
+                  const SizedBox(height: 24),
+                  _buildFormationsList(context),
+                  const SizedBox(height: 80),
+                ],
+              ),
+            ),
+          ),
         ),
       ),
     );
@@ -185,6 +215,8 @@ class _DiscoverFormationsPageState extends State<DiscoverFormationsPage> with Ti
           _buildFilterChip('En ligne'),
           SizedBox(width: 8),
           _buildFilterChip('Présentielle'),
+          SizedBox(width: 8),
+          _buildFilterChip('Stage'),
           SizedBox(width: 16),
           Container(height: 32, width: 1, color: Colors.black12),
           SizedBox(width: 16),
@@ -382,7 +414,7 @@ class _DiscoverFormationsPageState extends State<DiscoverFormationsPage> with Ti
                           onPressed: () async {
                             final shareUrl = await _buildLocalShareUrl(formation.id);
                             final shareText = _composeShareText(formation, shareUrl);
-                            Share.share(shareText);
+                            await shareBytes(null, shareText, 'formation_share.txt');
                           },
                           icon: Icon(Icons.share_rounded, size: 18, color: Colors.black54),
                         ),
@@ -609,14 +641,7 @@ class _DiscoverFormationsPageState extends State<DiscoverFormationsPage> with Ti
                     onPressed: () async {
                       final bytes = await _captureQrPng(qrKey);
                       final shareText = _composeShareText(formation, shareUrl);
-                      if (bytes != null) {
-                        final directory = await getTemporaryDirectory();
-                        final file = File('${directory.path}/formation_qr.png');
-                        await file.writeAsBytes(bytes);
-                        Share.shareXFiles([XFile(file.path)], text: shareText);
-                      } else {
-                        Share.share(shareText);
-                      }
+                      await shareBytes(bytes, shareText, 'formation_qr.png');
                     },
                     icon: Icon(Icons.share_rounded, color: AppTheme.primary),
                   ),
@@ -688,10 +713,6 @@ class _DiscoverFormationsPageState extends State<DiscoverFormationsPage> with Ti
                     return;
                   }
 
-                  final directory = await getTemporaryDirectory();
-                  final file = File('${directory.path}/formation_qr.png');
-                  await file.writeAsBytes(bytes);
-
                   final shareText = '''
 📚 *${formation.titre}*
 
@@ -710,11 +731,7 @@ $shareUrl
 👇 Scannez le QR code ci-dessous pour accéder directement!
 ''';
 
-                        if (!context.mounted) return;
-                        Share.shareXFiles(
-                    [XFile(file.path)],
-                    text: shareText,
-                  );
+                  await shareBytes(bytes, shareText, 'formation_qr.png');
                 },
                 borderRadius: BorderRadius.circular(8),
                 child: Padding(
@@ -1164,15 +1181,24 @@ $shareUrl
   Future<List<Formation>> _getFilteredAndSortedFormations() async {
     var formations = _db.getFormations();
 
-    if (searchController.text.isNotEmpty) {
+    final query = searchController.text.trim().toLowerCase();
+    if (query.isNotEmpty) {
       formations = formations
-          .where((f) => f.titre.toLowerCase().contains(searchController.text.toLowerCase()))
+          .where((f) =>
+              f.titre.toLowerCase().contains(query) ||
+              f.description.toLowerCase().contains(query) ||
+              f.modules.any((module) => module.toLowerCase().contains(query)))
           .toList();
     }
 
     if (filterType != 'Tous') {
-      final typeFilter = filterType == 'En ligne' ? 'enligne' : 'presentielle';
-      formations = formations.where((f) => f.type.toString().split('.').last == typeFilter).toList();
+      if (filterType == 'En ligne') {
+        formations = formations.where((f) => f.type == FormationType.enligne).toList();
+      } else if (filterType == 'Présentielle') {
+        formations = formations.where((f) => f.type == FormationType.presentielle).toList();
+      } else if (filterType == 'Stage') {
+        formations = formations.where((f) => f.estStage).toList();
+      }
     }
 
     if (sortBy == 1) {
@@ -1185,32 +1211,11 @@ $shareUrl
   }
 
   Future<String> _buildLocalShareUrl(String formationId) async {
-    // Prefer the current app origin so shared links work in Docker/local dev
     try {
-      final origin = Uri.base.origin; // e.g. http://localhost:8080
-      final localTarget = '$origin/formation.html?id=$formationId';
-
-      // Try to expose LAN IP for sharing on the same network (use host port 8080)
-      const port = 8080;
-      const path = 'formation.html';
-      try {
-        final interfaces = await NetworkInterface.list(includeLoopback: false, type: InternetAddressType.IPv4);
-        for (final interface in interfaces) {
-          for (final address in interface.addresses) {
-            if (!address.isLoopback && address.type == InternetAddressType.IPv4) {
-              return 'http://${address.address}:$port/$path?id=$formationId';
-            }
-          }
-        }
-      } catch (e) {
-        debugPrint('Local LAN URL build failed: $e');
-      }
-
-      return localTarget;
-    } catch (e) {
-      // Fallback
-      return 'http://127.0.0.1:8080/formation.html?id=$formationId';
-    }
+      final origin = Uri.base.origin.startsWith('http') ? Uri.base.origin : '';
+      if (origin.isNotEmpty) return '$origin/formation.html?id=$formationId';
+    } catch (_) {}
+    return '/formation.html?id=$formationId';
   }
 
   Future<Uint8List?> _captureQrPng(GlobalKey key) async {

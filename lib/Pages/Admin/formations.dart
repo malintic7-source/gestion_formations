@@ -2,17 +2,17 @@ import 'package:animate_do/animate_do.dart';
 import 'dart:async';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:gestion_formations/config/theme.dart';
 import 'package:gestion_formations/Models/formation.dart';
+import 'package:gestion_formations/Models/user.dart';
 import 'package:gestion_formations/Services/db_services.dart';
 import 'package:gestion_formations/Services/imagekit_service.dart';
+import 'package:gestion_formations/Services/pdf_service.dart';
 import 'package:qr_flutter/qr_flutter.dart';
-import 'package:share_plus/share_plus.dart';
-import 'package:path_provider/path_provider.dart';
+import 'package:gestion_formations/utils/share_helper.dart';
 
 class AdminFormations extends StatefulWidget {
   const AdminFormations({super.key});
@@ -29,7 +29,6 @@ class _AdminFormationsState extends State<AdminFormations>
   String selectedStatus = 'Tous';
   String selectedSort = 'Date création';
   String selectedFormationKind = 'Tous';
-  bool _hasChosenFormationType = false;
   final Set<String> _expandedFormationIds = {};
   late AnimationController _fadeController;
 
@@ -37,15 +36,9 @@ class _AdminFormationsState extends State<AdminFormations>
   void initState() {
     super.initState();
     _fadeController = AnimationController(
-      duration: Duration(milliseconds: 600),
+      duration: const Duration(milliseconds: 600),
       vsync: this,
     )..forward();
-
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted && !_hasChosenFormationType) {
-        _showFormationTypeDialog(context);
-      }
-    });
   }
 
   @override
@@ -53,6 +46,21 @@ class _AdminFormationsState extends State<AdminFormations>
     _fadeController.dispose();
     searchController.dispose();
     super.dispose();
+  }
+
+  Future<void> _generateBrochurePdf(Formation formation) async {
+    try {
+      final pdfBytes = await PdfService().generateFormationBrochurePdf(formation);
+      await PdfService().printOrDownloadPdf(
+        pdfBytes: pdfBytes,
+        filename: 'Brochure_${formation.titre.replaceAll(' ', '_')}.pdf',
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Erreur génération brochure PDF: $e'), backgroundColor: AppTheme.error),
+      );
+    }
   }
 
   void _toggleFormationExpansion(String formationId) {
@@ -65,97 +73,23 @@ class _AdminFormationsState extends State<AdminFormations>
     });
   }
 
-  void _showFormationTypeDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Row(
-          children: [
-            Expanded(
-              child: Text(
-                'Afficher les formations',
-                style: GoogleFonts.poppins(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w700,
-                  color: AppTheme.textPrimary,
-                ),
-              ),
-            ),
-            IconButton(
-              icon: const Icon(Icons.close_rounded, color: AppTheme.textMuted),
-              onPressed: () {
-                setState(() {
-                  _hasChosenFormationType = true;
-                });
-                Navigator.pop(context);
-              },
-            ),
-          ],
-        ),
-        content: Text(
-          'Choisissez la catégorie de formations à afficher par défaut.',
-          style: GoogleFonts.poppins(fontSize: 13, color: AppTheme.textSecondary),
-        ),
-        actions: [
-          Container(
-            decoration: BoxDecoration(
-              gradient: AppTheme.orangeGradient,
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: TextButton(
-              onPressed: () {
-                setState(() {
-                  selectedFormationKind = 'Stage';
-                  _hasChosenFormationType = true;
-                });
-                Navigator.pop(context);
-              },
-              child: Text(
-                'Stage (SFP)',
-                style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.w600),
-              ),
-            ),
-          ),
-          Container(
-            decoration: BoxDecoration(
-              gradient: AppTheme.heroGradient,
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: TextButton(
-              onPressed: () {
-                setState(() {
-                  selectedFormationKind = 'Formation';
-                  _hasChosenFormationType = true;
-                });
-                Navigator.pop(context);
-              },
-              child: Text(
-                'Formation',
-                style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.w600),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
-    final isMobile = MediaQuery.of(context).size.width < 768;
+    final isMobile = MediaQuery.of(context).size.width < 600;
+    final isTablet = MediaQuery.of(context).size.width >= 600 && MediaQuery.of(context).size.width < 1100;
+    final hp = isMobile ? 10.0 : isTablet ? 14.0 : 20.0;
+    final vp = isMobile ? 10.0 : 20.0;
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
+      padding: EdgeInsets.symmetric(vertical: vp, horizontal: hp),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisAlignment: MainAxisAlignment.start,
         children: [
           _buildHeader(isMobile),
-          const SizedBox(height: 28),
+          SizedBox(height: isMobile ? 16 : 28),
           _buildSearchAndFilters(isMobile),
-          const SizedBox(height: 28),
+          SizedBox(height: isMobile ? 16 : 28),
           _buildFormationsStream(context, isMobile),
         ],
       ),
@@ -165,72 +99,114 @@ class _AdminFormationsState extends State<AdminFormations>
   Widget _buildHeader(bool isMobile) {
     return FadeTransition(
       opacity: _fadeController,
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Formations',
-                style: GoogleFonts.poppins(
-                  fontSize: 28,
-                  fontWeight: FontWeight.w800,
-                  color: AppTheme.textPrimary,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                'Gérez le catalogue et les sessions de formations',
-                style: GoogleFonts.poppins(
-                  fontSize: 13,
-                  color: AppTheme.textSecondary,
-                  fontWeight: FontWeight.w400,
-                ),
-              ),
-            ],
-          ),
-          if (!isMobile)
-            Container(
-              decoration: BoxDecoration(
-                gradient: AppTheme.heroGradient,
-                borderRadius: BorderRadius.circular(12),
-                boxShadow: AppTheme.heroShadow,
-              ),
-              child: Material(
-                color: Colors.transparent,
-                child: InkWell(
-                  onTap: () => _showCreateFormationDialog(context),
-                  borderRadius: BorderRadius.circular(12),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.add_rounded, color: Colors.white, size: 20),
-                        const SizedBox(width: 8),
-                        Text(
-                          'Créer',
-                          style: GoogleFonts.poppins(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w700,
-                            fontSize: 14,
-                          ),
-                        ),
-                      ],
+      child: isMobile
+          ? Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    'Gérez le catalogue et les sessions de formations',
+                    style: GoogleFonts.poppins(
+                      fontSize: 12,
+                      color: AppTheme.textSecondary,
+                      fontWeight: FontWeight.w400,
+                      height: 1.3,
                     ),
                   ),
                 ),
-              ),
+                const SizedBox(width: 10),
+                Container(
+                  decoration: BoxDecoration(
+                    gradient: AppTheme.heroGradient,
+                    borderRadius: BorderRadius.circular(10),
+                    boxShadow: AppTheme.heroShadow,
+                  ),
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap: () => _showCreateFormationDialog(context),
+                      borderRadius: BorderRadius.circular(10),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.add_rounded, color: Colors.white, size: 18),
+                            const SizedBox(width: 4),
+                            Text(
+                              'Créer',
+                              style: GoogleFonts.poppins(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w700,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            )
+          : Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Formations',
+                      style: GoogleFonts.poppins(
+                        fontSize: 28,
+                        fontWeight: FontWeight.w800,
+                        color: AppTheme.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Gérez le catalogue et les sessions de formations',
+                      style: GoogleFonts.poppins(
+                        fontSize: 13,
+                        color: AppTheme.textSecondary,
+                        fontWeight: FontWeight.w400,
+                      ),
+                    ),
+                  ],
+                ),
+                Container(
+                  decoration: BoxDecoration(
+                    gradient: AppTheme.heroGradient,
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: AppTheme.heroShadow,
+                  ),
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap: () => _showCreateFormationDialog(context),
+                      borderRadius: BorderRadius.circular(12),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.add_rounded, color: Colors.white, size: 20),
+                            const SizedBox(width: 8),
+                            Text(
+                              'Créer',
+                              style: GoogleFonts.poppins(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w700,
+                                fontSize: 14,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
-          if (isMobile)
-            FloatingActionButton(
-              onPressed: () => _showCreateFormationDialog(context),
-              backgroundColor: AppTheme.primary,
-              child: const Icon(Icons.add_rounded),
-            ),
-        ],
-      ),
     );
   }
 
@@ -276,21 +252,62 @@ class _AdminFormationsState extends State<AdminFormations>
         ),
 
         SizedBox(height: 16),
+        const SizedBox(height: 14),
         SingleChildScrollView(
           scrollDirection: Axis.horizontal,
           child: Row(
             children: [
-              _buildFilterChip('Tous', 'Tous'),
-              SizedBox(width: 10),
-              _buildFilterChip('Programmée', 'Programmée'),
-              SizedBox(width: 10),
+              _buildKindChip('Toutes les formations', 'Tous'),
+              const SizedBox(width: 8),
+              _buildKindChip('Stage SFP (A la carte)', 'Stage'),
+              const SizedBox(width: 8),
+              _buildKindChip('Présentiel', 'presentielle'),
+              const SizedBox(width: 8),
+              _buildKindChip('En Ligne', 'enligne'),
+              const SizedBox(width: 16),
+              Container(width: 1, height: 24, color: Colors.grey.shade300),
+              const SizedBox(width: 16),
+              _buildFilterChip('Tous statuts', 'Tous'),
+              const SizedBox(width: 8),
               _buildFilterChip('En Cours', 'En Cours'),
-              SizedBox(width: 10),
+              const SizedBox(width: 8),
+              _buildFilterChip('Programmée', 'Programmée'),
+              const SizedBox(width: 8),
               _buildFilterChip('Terminée', 'Terminée'),
             ],
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildKindChip(String label, String value) {
+    final isSelected = selectedFormationKind == value;
+    return GestureDetector(
+      onTap: () => setState(() => selectedFormationKind = value),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(10),
+          color: isSelected ? AppTheme.primary : Colors.white,
+          border: Border.all(color: isSelected ? AppTheme.primary : Colors.grey.shade300),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.04),
+              blurRadius: 6,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Text(
+          label,
+          style: GoogleFonts.poppins(
+            fontSize: 12,
+            fontWeight: FontWeight.w700,
+            color: isSelected ? Colors.white : Colors.black87,
+          ),
+        ),
+      ),
     );
   }
 
@@ -386,165 +403,219 @@ class _AdminFormationsState extends State<AdminFormations>
   ) {
     final formationId = formation.id;
     final isExpanded = _expandedFormationIds.contains(formationId);
+    final isMobile = MediaQuery.of(context).size.width < 600;
 
     return SlideInUp(
-      delay: Duration(milliseconds: 50 + (index * 40)),
-      duration: Duration(milliseconds: 420),
+      delay: Duration(milliseconds: 30 + (index * 30)),
+      duration: const Duration(milliseconds: 380),
       child: Container(
+        margin: const EdgeInsets.only(bottom: 10),
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(14),
           color: Colors.white,
+          border: Border.all(color: const Color(0xFFF1F5F9), width: 1.2),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.04),
-              blurRadius: 8,
-              offset: Offset(0, 3),
+              color: const Color(0xFF0F172A).withValues(alpha: 0.04),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
             ),
           ],
         ),
         child: Column(
           children: [
-            ListTile(
-              contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              leading:
-                  formation.imageUrl != null && formation.imageUrl!.isNotEmpty
-                  ? ClipRRect(
-                      borderRadius: BorderRadius.circular(8),
-                      child: Image.network(
-                        formation.imageUrl!,
-                        width: formation.imageFormat == ImageFormat.carre ? 64 : 48,
-                        height: formation.imageFormat == ImageFormat.carre ? 64 : 85,
-                        fit: BoxFit.cover,
-                        errorBuilder: (c, e, s) => Container(
-                          width: formation.imageFormat == ImageFormat.carre ? 64 : 48,
-                          height: formation.imageFormat == ImageFormat.carre ? 64 : 85,
-                          color: Colors.grey.shade200,
-                          child: Icon(
-                            Icons.broken_image,
-                            color: Colors.grey.shade600,
+            InkWell(
+              borderRadius: BorderRadius.circular(14),
+              onTap: () => _toggleFormationExpansion(formationId),
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Image Thumbnail
+                        formation.imageUrl != null && formation.imageUrl!.isNotEmpty
+                            ? ClipRRect(
+                                borderRadius: BorderRadius.circular(10),
+                                child: Image.network(
+                                  formation.imageUrl!,
+                                  width: isMobile ? 54 : 64,
+                                  height: isMobile ? 54 : 64,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (c, e, s) => Container(
+                                    width: isMobile ? 54 : 64,
+                                    height: isMobile ? 54 : 64,
+                                    decoration: BoxDecoration(
+                                      color: Colors.grey.shade100,
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                    child: Icon(Icons.school_rounded, color: Colors.grey.shade500, size: 24),
+                                  ),
+                                ),
+                              )
+                            : Container(
+                                width: isMobile ? 54 : 64,
+                                height: isMobile ? 54 : 64,
+                                decoration: BoxDecoration(
+                                  color: AppTheme.primary.withValues(alpha: 0.08),
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: const Icon(Icons.school_rounded, color: AppTheme.primary, size: 26),
+                              ),
+                        const SizedBox(width: 12),
+                        // Title and Description
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                formation.titre,
+                                style: GoogleFonts.poppins(
+                                  fontSize: isMobile ? 14 : 15,
+                                  fontWeight: FontWeight.w700,
+                                  color: AppTheme.textPrimary,
+                                  height: 1.25,
+                                ),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              if (formation.description.isNotEmpty) ...[
+                                const SizedBox(height: 4),
+                                Text(
+                                  formation.description,
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 12,
+                                    color: AppTheme.textSecondary,
+                                    height: 1.3,
+                                  ),
+                                  maxLines: isMobile ? 1 : 2,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ],
+                            ],
                           ),
                         ),
-                      ),
-                    )
-                  : Container(
-                      width: 64,
-                      height: 64,
-                      decoration: BoxDecoration(
-                        color: Colors.grey.shade100,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Icon(
-                        Icons.school_rounded,
-                        color: Colors.grey.shade600,
-                      ),
-                    ),
-              title: Text(
-                formation.titre,
-                style: GoogleFonts.poppins(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w700,
-                  color: Colors.black87,
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-              subtitle: Text(
-                formation.description,
-                style: GoogleFonts.poppins(fontSize: 12, color: Colors.black54),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-              trailing: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      if (formation.type == FormationType.mixte && formation.prixEnLigne != null) ...[
-                        Text(
-                          'En ligne: ${formation.prixEnLigne!.toStringAsFixed(0)}F',
-                          style: GoogleFonts.poppins(
-                            fontSize: 10,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.black87,
-                          ),
-                        ),
-                        Text(
-                          'Présentiel: ${formation.prix.toStringAsFixed(0)}F',
-                          style: GoogleFonts.poppins(
-                            fontSize: 10,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.black87,
-                          ),
-                        ),
-                      ] else if (formation.type == FormationType.enligne) ...[
-                        Text(
-                          'En ligne: ${(formation.prixEnLigne ?? formation.prix).toStringAsFixed(0)}F',
-                          style: GoogleFonts.poppins(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w800,
-                            color: Colors.black87,
-                          ),
-                        ),
-                      ] else ...[
-                        Text(
-                          'Présentiel: ${formation.prix.toStringAsFixed(0)}F',
-                          style: GoogleFonts.poppins(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w800,
-                            color: Colors.black87,
-                          ),
+                        // Action menu
+                        PopupMenuButton<String>(
+                          padding: EdgeInsets.zero,
+                          icon: const Icon(Icons.more_vert_rounded, color: Color(0xFF64748B), size: 20),
+                          onSelected: (value) {
+                            if (value == 'modifier') {
+                              _showEditFormationDialog(context, formation);
+                            } else if (value == 'supprimer') {
+                              _confirmDeleteFormation(context, formation);
+                            } else if (value == 'partager') {
+                              _showFormationQrDialog(context, formation);
+                            } else if (value == 'brochure_pdf') {
+                              _generateBrochurePdf(formation);
+                            } else if (value == 'voir') {
+                              _toggleFormationExpansion(formationId);
+                            }
+                          },
+                          itemBuilder: (context) => [
+                            PopupMenuItem(
+                              value: 'voir',
+                              child: Text(isExpanded ? 'Cacher détails' : 'Voir détails'),
+                            ),
+                            const PopupMenuItem(value: 'modifier', child: Text('Modifier')),
+                            const PopupMenuItem(value: 'partager', child: Text('Partager')),
+                            const PopupMenuItem(
+                              value: 'brochure_pdf',
+                              child: Row(
+                                children: [
+                                  Icon(Icons.picture_as_pdf_rounded, size: 18, color: Color(0xFFE60000)),
+                                  SizedBox(width: 8),
+                                  Text('Brochure PDF'),
+                                ],
+                              ),
+                            ),
+                            const PopupMenuItem(
+                              value: 'supprimer',
+                              child: Text('Supprimer', style: TextStyle(color: AppTheme.error)),
+                            ),
+                          ],
                         ),
                       ],
-                    ],
-                  ),
-                  SizedBox(width: 8),
-                  PopupMenuButton<String>(
-                    padding: EdgeInsets.zero,
-                    onSelected: (value) {
-                      if (value == 'modifier') {
-                        _showEditFormationDialog(context, formation);
-                      } else if (value == 'supprimer') {
-                        _confirmDeleteFormation(context, formation);
-                      } else if (value == 'partager') {
-                        _showFormationQrDialog(context, formation);
-                      } else if (value == 'voir') {
-                        _toggleFormationExpansion(formationId);
-                      }
-                    },
-                    itemBuilder: (context) => [
-                          PopupMenuItem(
-                            value: 'voir',
+                    ),
+                    const SizedBox(height: 10),
+                    // Price and Tag Badges Row
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 6,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: [
+                        if (formation.type == FormationType.mixte && formation.prixEnLigne != null) ...[
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF0FDF4),
+                              borderRadius: BorderRadius.circular(6),
+                              border: Border.all(color: const Color(0xFFBBF7D0)),
+                            ),
                             child: Text(
-                              isExpanded ? 'Cacher détails' : 'Voir détails',
+                              'En ligne : ${formation.prixEnLigne!.toStringAsFixed(0)} F',
+                              style: GoogleFonts.poppins(fontSize: 11, fontWeight: FontWeight.w700, color: const Color(0xFF166534)),
                             ),
                           ),
-                          PopupMenuItem(
-                            value: 'modifier',
-                            child: Text('Modifier'),
-                          ),
-                          PopupMenuItem(
-                            value: 'partager',
-                            child: Text('Partager'),
-                          ),
-                          PopupMenuItem(
-                            value: 'supprimer',
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFEFF6FF),
+                              borderRadius: BorderRadius.circular(6),
+                              border: Border.all(color: const Color(0xFFBFDBFE)),
+                            ),
                             child: Text(
-                              'Supprimer',
-                              style: TextStyle(color: Color(0xFFEF4444)),
+                              'Présentiel : ${formation.prix.toStringAsFixed(0)} F',
+                              style: GoogleFonts.poppins(fontSize: 11, fontWeight: FontWeight.w700, color: const Color(0xFF1D4ED8)),
+                            ),
+                          ),
+                        ] else if (formation.type == FormationType.enligne) ...[
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF0FDF4),
+                              borderRadius: BorderRadius.circular(6),
+                              border: Border.all(color: const Color(0xFFBBF7D0)),
+                            ),
+                            child: Text(
+                              'En ligne : ${(formation.prixEnLigne ?? formation.prix).toStringAsFixed(0)} F',
+                              style: GoogleFonts.poppins(fontSize: 11, fontWeight: FontWeight.w700, color: const Color(0xFF166534)),
+                            ),
+                          ),
+                        ] else ...[
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFEFF6FF),
+                              borderRadius: BorderRadius.circular(6),
+                              border: Border.all(color: const Color(0xFFBFDBFE)),
+                            ),
+                            child: Text(
+                              'Présentiel : ${formation.prix.toStringAsFixed(0)} F',
+                              style: GoogleFonts.poppins(fontSize: 11, fontWeight: FontWeight.w700, color: const Color(0xFF1D4ED8)),
                             ),
                           ),
                         ],
-                        child: Icon(
-                          Icons.more_vert_rounded,
-                          size: 20,
-                          color: Colors.black54,
-                        ),
-                      ),
-                ],
+                        if (formation.estStage)
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFFFF7ED),
+                              borderRadius: BorderRadius.circular(6),
+                              border: Border.all(color: const Color(0xFFFED7AA)),
+                            ),
+                            child: Text(
+                              'Stage SFP',
+                              style: GoogleFonts.poppins(fontSize: 11, fontWeight: FontWeight.w600, color: const Color(0xFFC2410C)),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
-              onTap: () => _toggleFormationExpansion(formationId),
             ),
             AnimatedSize(
               duration: Duration(milliseconds: 250),
@@ -617,6 +688,19 @@ class _AdminFormationsState extends State<AdminFormations>
                               style: GoogleFonts.poppins(
                                 fontSize: 12,
                                 color: Colors.black54,
+                              ),
+                            ),
+                          ],
+                          if (formation.moduleFormateurIds.isNotEmpty) ...[
+                            SizedBox(height: 8),
+                            Text(
+                              formation.moduleFormateurIds.entries
+                                  .map((entry) => '${entry.key} → ${entry.value}')
+                                  .join('\n'),
+                              style: GoogleFonts.poppins(
+                                fontSize: 12,
+                                color: AppTheme.primary,
+                                fontWeight: FontWeight.w600,
                               ),
                             ),
                           ],
@@ -731,15 +815,19 @@ class _AdminFormationsState extends State<AdminFormations>
       final formationStatus = _formatStatus(formation.status);
       final matchesStatus =
           selectedStatus == 'Tous' || formationStatus == selectedStatus;
-      final matchesType =
-          selectedFormationKind == 'Tous' ||
+      final matchesType = selectedFormationKind == 'Tous' ||
           (selectedFormationKind == 'Stage'
               ? formation.estStage
-              : !formation.estStage);
+              : (selectedFormationKind == 'presentielle'
+                  ? formation.type == FormationType.presentielle
+                  : (selectedFormationKind == 'enligne'
+                      ? formation.type == FormationType.enligne
+                      : !formation.estStage)));
       final matchesSearch =
           query.isEmpty ||
           formation.titre.toLowerCase().contains(query) ||
-          formation.description.toLowerCase().contains(query);
+          formation.description.toLowerCase().contains(query) ||
+          formation.modules.any((module) => module.toLowerCase().contains(query));
       return matchesStatus && matchesType && matchesSearch;
     }).toList();
   }
@@ -871,10 +959,6 @@ class _AdminFormationsState extends State<AdminFormations>
                     return;
                   }
 
-                  final directory = await getTemporaryDirectory();
-                  final file = File('${directory.path}/formation_qr.png');
-                  await file.writeAsBytes(bytes);
-
                   final shareText =
                       '''
 📚 *${formation.titre}*
@@ -898,8 +982,18 @@ $url
 👇 Scannez le QR code ci-dessous pour accéder directement!
                   ''';
 
-                  if (!localContext.mounted) return;
-                  Share.shareXFiles([XFile(file.path)], text: shareText);
+                  try {
+                    await shareBytes(bytes, shareText, 'formation_qr.png');
+                    if (!localContext.mounted) return;
+                    ScaffoldMessenger.of(localContext).showSnackBar(
+                      SnackBar(content: Text('Partage lancé')),
+                    );
+                  } catch (e) {
+                    if (!localContext.mounted) return;
+                    ScaffoldMessenger.of(localContext).showSnackBar(
+                      SnackBar(content: Text('Échec du partage')),
+                    );
+                  }
                 },
                 borderRadius: BorderRadius.circular(8),
                 child: Padding(
@@ -971,11 +1065,58 @@ $url
     return null;
   }
 
+  Map<String, double> _parseModulePrices(String rawPrices) {
+    final prices = <String, double>{};
+    for (final entry in rawPrices.split(';')) {
+      final parts = entry.split('=');
+      if (parts.length != 2) continue;
+      final module = parts.first.trim();
+      final price = double.tryParse(parts.last.trim());
+      if (module.isNotEmpty && price != null && price >= 0) {
+        prices[module] = price;
+      }
+    }
+    return prices;
+  }
+
+  Map<String, String> _parseModuleFormateurIds(String rawAssignments) {
+    final assignments = <String, String>{};
+    for (final entry in rawAssignments.split(';')) {
+      final parts = entry.split('=');
+      if (parts.length != 2) continue;
+      final module = parts[0].trim();
+      final formateurId = parts[1].trim();
+      if (module.isNotEmpty && formateurId.isNotEmpty) {
+        assignments[module] = formateurId;
+      }
+    }
+    return assignments;
+  }
+
+  String? _validateModuleFormateurIds(
+    Map<String, String> assignments,
+    List<String> modules,
+  ) {
+    for (final entry in assignments.entries) {
+      if (!modules.contains(entry.key)) {
+        return 'Le module « ${entry.key} » n’existe pas dans cette formation.';
+      }
+      final formateur = _db.getUserById(entry.value);
+      if (formateur == null || formateur.role != UserRole.formateur) {
+        return 'Le formateur « ${entry.value} » est introuvable ou n’a pas le rôle Formateur.';
+      }
+    }
+    return null;
+  }
+
   void _showCreateFormationDialog(BuildContext context) {
     final formKey = GlobalKey<FormState>();
     final titreController = TextEditingController();
     final descriptionController = TextEditingController();
     final modulesController = TextEditingController();
+    final modulesBonusController = TextEditingController();
+    final modulePricesController = TextEditingController();
+    final moduleFormateursController = TextEditingController();
     
     final imageUrlController = TextEditingController();
     final formateursController = TextEditingController();
@@ -1037,6 +1178,30 @@ $url
                       null,
                       Icons.book_rounded,
                       helperText: 'Exemple : HTML, CSS, Flutter',
+                      maxLines: 2,
+                    ),
+                    _buildFormField(
+                      modulesBonusController,
+                      'Modules Bonus Offerts (optionnels, séparés par virgules)',
+                      null,
+                      Icons.card_giftcard_rounded,
+                      helperText: 'Exemple : Initiation PowerPoint + IA, Support Rédaction',
+                      maxLines: 2,
+                    ),
+                    _buildFormField(
+                      modulePricesController,
+                      'Prix par module (Module=prix, séparés par ;)',
+                      null,
+                      Icons.payments_rounded,
+                      helperText: 'Exemple : HTML=25000; React=50000',
+                      maxLines: 2,
+                    ),
+                    _buildFormField(
+                      moduleFormateursController,
+                      'Responsable de chaque module (Module=ID formateur ; …)',
+                      null,
+                      Icons.person_pin_rounded,
+                      helperText: 'Exemple : HTML=formateur_1; Flutter=formateur_2',
                       maxLines: 2,
                     ),
                     // Image picker avec upload ImageKit
@@ -1133,7 +1298,7 @@ $url
                                             content: Text(
                                               'Erreur: ${e.toString()}',
                                             ),
-                                            backgroundColor: Color(0xFFEF4444),
+                                            backgroundColor: AppTheme.error,
                                           ),
                                         );
                                       } finally {
@@ -1205,6 +1370,19 @@ $url
                             ),
                         ],
                       ),
+                    ),
+                    SizedBox(height: 8),
+                    _buildFormField(
+                      imageUrlController,
+                      'URL de l\'image (optionnel)',
+                      null,
+                      Icons.link_rounded,
+                      helperText: 'Coller un lien (http...) ou utiliser le sélecteur ci-dessus',
+                      onChanged: (val) {
+                        setState(() {
+                          uploadedImageUrl = val.trim().isEmpty ? null : val.trim();
+                        });
+                      },
                     ),
                     SizedBox(height: 12),
                     DropdownButtonFormField<ImageFormat>(
@@ -1372,113 +1550,143 @@ $url
               ),
               Container(
                 decoration: BoxDecoration(
-                  gradient: AppTheme.heroGradient,
+                  gradient: isUploading ? null : AppTheme.heroGradient,
+                  color: isUploading ? Colors.grey.shade400 : null,
                   borderRadius: BorderRadius.circular(8),
+                  boxShadow: isUploading ? null : AppTheme.heroShadow,
                 ),
                 child: Material(
                   color: Colors.transparent,
                   child: InkWell(
-                    onTap: () async {
-                      if (!formKey.currentState!.validate()) return;
+                    onTap: isUploading
+                        ? null
+                        : () async {
+                            if (!formKey.currentState!.validate()) return;
 
-                      final modules = modulesController.text
-                          .split(',')
-                          .map((value) => value.trim())
-                          .where((value) => value.isNotEmpty)
-                          .toList();
-                      final formateurIds = formateursController.text
-                          .split(',')
-                          .map((value) => value.trim())
-                          .where((value) => value.isNotEmpty)
-                          .toList();
-                      final prix =
-                          double.tryParse(prixController.text.trim()) ?? 0.0;
-                      final prixEnLigne = prixEnLigneController.text.trim().isEmpty
-                          ? null
-                          : double.tryParse(prixEnLigneController.text.trim());
-                      final dureeSemaines =
-                          int.tryParse(dureeController.text.trim()) ?? 0;
-                      final capaciteMax = int.tryParse(
-                        capaciteController.text.trim(),
-                      );
-                      final maxModulesParEtudiant = isStage
-                          ? null
-                          : int.tryParse(maxModulesController.text.trim());
-                      final dateDebut = dateDebutController.text.trim().isEmpty
-                          ? null
-                          : _parseDate(dateDebutController.text.trim());
-                      final dateFin = dateFinController.text.trim().isEmpty
-                          ? null
-                          : _parseDate(dateFinController.text.trim());
-                      final horaires = _parseHoraires(
-                        horairesController.text.trim(),
-                      );
+                            final modules = modulesController.text
+                                .split(',')
+                                .map((value) => value.trim())
+                                .where((value) => value.isNotEmpty)
+                                .toList();
+                            final modulesBonus = modulesBonusController.text
+                                .split(',')
+                                .map((value) => value.trim())
+                                .where((value) => value.isNotEmpty)
+                                .toList();
+                            final modulePrices = _parseModulePrices(modulePricesController.text);
+                            final moduleFormateurIds = _parseModuleFormateurIds(
+                              moduleFormateursController.text,
+                            );
+                            final assignmentError = _validateModuleFormateurIds(
+                              moduleFormateurIds,
+                              modules,
+                            );
+                            if (assignmentError != null) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text(assignmentError)),
+                              );
+                              return;
+                            }
+                            final formateurIds = {
+                              ...formateursController.text
+                                .split(',')
+                                .map((value) => value.trim())
+                                .where((value) => value.isNotEmpty),
+                              ...moduleFormateurIds.values,
+                            }.toList();
+                            final prix =
+                                double.tryParse(prixController.text.trim()) ?? 0.0;
+                            final prixEnLigne = prixEnLigneController.text.trim().isEmpty
+                                ? null
+                                : double.tryParse(prixEnLigneController.text.trim());
+                            final dureeSemaines =
+                                int.tryParse(dureeController.text.trim()) ?? 0;
+                            final capaciteMax = int.tryParse(
+                              capaciteController.text.trim(),
+                            );
+                            final maxModulesParEtudiant = isStage
+                                ? int.tryParse(maxModulesController.text.trim())
+                                : null;
+                            final dateDebut = dateDebutController.text.trim().isEmpty
+                                ? null
+                                : _parseDate(dateDebutController.text.trim());
+                            final dateFin = dateFinController.text.trim().isEmpty
+                                ? null
+                                : _parseDate(dateFinController.text.trim());
+                            final horaires = _parseHoraires(
+                              horairesController.text.trim(),
+                            );
 
-                      final newFormation = Formation(
-                        id: '',
-                        titre: titreController.text.trim(),
-                        description: descriptionController.text.trim(),
-                        modules: modules,
-                        imageUrl: imageUrlController.text.trim().isEmpty
-                            ? null
-                            : imageUrlController.text.trim(),
-                        imageFormat: imageFormatValue,
-                        formateurIds: formateurIds,
-                        prix: prix,
-                        prixEnLigne: prixEnLigne,
-                        type: typeValue == 'Présentielle'
-                            ? FormationType.presentielle
-                            : typeValue == 'Mixte'
-                            ? FormationType.mixte
-                            : FormationType.enligne,
-                        status: statusValue == 'En Cours'
-                            ? FormationStatus.enCours
-                            : statusValue == 'Terminée'
-                            ? FormationStatus.terminee
-                            : FormationStatus.programmee,
-                        dureeSemaines: dureeSemaines,
-                        dureeHeures: heuresController.text.trim().isEmpty
-                            ? null
-                            : heuresController.text.trim(),
-                        horaires: horaires,
-                        dateDebut: dateDebut,
-                        dateFin: dateFin,
-                        dateCreation: DateTime.now(),
-                        capaciteMax: capaciteMax,
-                        nombreInscrits: 0,
-                        estStage: isStage,
-                        maxModulesParEtudiant: maxModulesParEtudiant,
-                      );
+                            final newFormation = Formation(
+                              id: '',
+                              titre: titreController.text.trim(),
+                              description: descriptionController.text.trim(),
+                              modules: modules,
+                              modulesBonus: modulesBonus,
+                              modulePrices: modulePrices,
+                              moduleFormateurIds: moduleFormateurIds,
+                              imageUrl: imageUrlController.text.trim().isEmpty
+                                  ? null
+                                  : imageUrlController.text.trim(),
+                              imageFormat: imageFormatValue,
+                              formateurIds: formateurIds,
+                              prix: prix,
+                              prixEnLigne: prixEnLigne,
+                              type: typeValue == 'Présentielle'
+                                  ? FormationType.presentielle
+                                  : typeValue == 'Mixte'
+                                  ? FormationType.mixte
+                                  : FormationType.enligne,
+                              status: statusValue == 'En Cours'
+                                  ? FormationStatus.enCours
+                                  : statusValue == 'Terminée'
+                                  ? FormationStatus.terminee
+                                  : FormationStatus.programmee,
+                              dureeSemaines: dureeSemaines,
+                              dureeHeures: heuresController.text.trim().isEmpty
+                                  ? null
+                                  : heuresController.text.trim(),
+                              horaires: horaires,
+                              dateDebut: dateDebut,
+                              dateFin: dateFin,
+                              dateCreation: DateTime.now(),
+                              capaciteMax: capaciteMax,
+                              nombreInscrits: 0,
+                              estStage: isStage,
+                              maxModulesParEtudiant: maxModulesParEtudiant,
+                            );
 
-                      final localContext = context;
-                      try {
-                        await _db.addFormation(newFormation);
-                        if (!localContext.mounted) return;
-                        Navigator.pop(localContext);
-                        ScaffoldMessenger.of(localContext).showSnackBar(
-                          SnackBar(
-                            content: Text('Formation créée avec succès'),
-                            backgroundColor: AppTheme.primary,
-                          ),
-                        );
-                      } catch (e) {
-                        if (!localContext.mounted) return;
-                        ScaffoldMessenger.of(localContext).showSnackBar(
-                          SnackBar(
-                            content: Text('Erreur: ${e.toString()}'),
-                            backgroundColor: Color(0xFFEF4444),
-                          ),
-                        );
-                      }
-                    },
+                            setState(() => isUploading = true);
+                            final localContext = context;
+                            try {
+                              await _db.addFormation(newFormation);
+                              if (!localContext.mounted) return;
+                              Navigator.pop(localContext);
+                              ScaffoldMessenger.of(localContext).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Formation créée avec succès'),
+                                  backgroundColor: AppTheme.success,
+                                ),
+                              );
+                            } catch (e) {
+                              if (!localContext.mounted) return;
+                              setState(() => isUploading = false);
+                              ScaffoldMessenger.of(localContext).showSnackBar(
+                                SnackBar(
+                                  content: Text('Erreur: ${e.toString()}'),
+                                  backgroundColor: AppTheme.error,
+                                ),
+                              );
+                            }
+                          },
                     borderRadius: BorderRadius.circular(8),
                     child: Padding(
-                      padding: EdgeInsets.symmetric(
+                      padding: const EdgeInsets.symmetric(
                         horizontal: 20,
                         vertical: 10,
                       ),
                       child: Text(
-                        'Créer',
+                        isUploading ? 'Création...' : 'Créer',
                         style: GoogleFonts.poppins(
                           color: Colors.white,
                           fontWeight: FontWeight.w600,
@@ -1504,6 +1712,7 @@ $url
     bool isNumber = false,
     int maxLines = 1,
     String? helperText,
+    ValueChanged<String>? onChanged,
   }) {
     return Padding(
       padding: EdgeInsets.only(bottom: 12),
@@ -1512,6 +1721,7 @@ $url
         keyboardType: isNumber ? TextInputType.number : TextInputType.text,
         maxLines: maxLines,
         style: GoogleFonts.poppins(fontSize: 13),
+        onChanged: onChanged,
         decoration: InputDecoration(
           labelText: label,
           helperText: helperText,
@@ -1532,6 +1742,17 @@ $url
     );
     final modulesController = TextEditingController(
       text: formation.modules.join(', '),
+    );
+    final modulesBonusController = TextEditingController(
+      text: formation.modulesBonus.join(', '),
+    );
+    final modulePricesController = TextEditingController(
+      text: formation.modulePrices.entries.map((entry) => '${entry.key}=${entry.value}').join('; '),
+    );
+    final moduleFormateursController = TextEditingController(
+      text: formation.moduleFormateurIds.entries
+          .map((entry) => '${entry.key}=${entry.value}')
+          .join('; '),
     );
     
     final imageUrlController = TextEditingController(
@@ -1621,6 +1842,30 @@ $url
                       null,
                       Icons.book_rounded,
                       helperText: 'Exemple : HTML, CSS, Flutter',
+                      maxLines: 2,
+                    ),
+                    _buildFormField(
+                      modulesBonusController,
+                      'Modules Bonus Offerts (optionnels, séparés par virgules)',
+                      null,
+                      Icons.card_giftcard_rounded,
+                      helperText: 'Exemple : Initiation PowerPoint + IA, Support Rédaction',
+                      maxLines: 2,
+                    ),
+                    _buildFormField(
+                      modulePricesController,
+                      'Prix par module (Module=prix, séparés par ;)',
+                      null,
+                      Icons.payments_rounded,
+                      helperText: 'Exemple : HTML=25000; React=50000',
+                      maxLines: 2,
+                    ),
+                    _buildFormField(
+                      moduleFormateursController,
+                      'Responsable de chaque module (Module=ID formateur ; …)',
+                      null,
+                      Icons.person_pin_rounded,
+                      helperText: 'Exemple : HTML=formateur_1; Flutter=formateur_2',
                       maxLines: 2,
                     ),
                     // Image picker avec upload ImageKit
@@ -1716,7 +1961,7 @@ $url
                                             content: Text(
                                               'Erreur: ${e.toString()}',
                                             ),
-                                            backgroundColor: Color(0xFFEF4444),
+                                            backgroundColor: AppTheme.error,
                                           ),
                                         );
                                       } finally {
@@ -1786,6 +2031,19 @@ $url
                             ),
                         ],
                       ),
+                    ),
+                    SizedBox(height: 8),
+                    _buildFormField(
+                      imageUrlController,
+                      'URL de l\'image (optionnel)',
+                      null,
+                      Icons.link_rounded,
+                      helperText: 'Coller un lien (http...) ou utiliser le sélecteur ci-dessus',
+                      onChanged: (val) {
+                        setState(() {
+                          uploadedImageUrl = val.trim().isEmpty ? null : val.trim();
+                        });
+                      },
                     ),
                     SizedBox(height: 12),
                     DropdownButtonFormField<ImageFormat>(
@@ -1871,7 +2129,7 @@ $url
                       Icons.people_rounded,
                       isNumber: true,
                     ),
-                    if (!isStage)
+                    if (isStage)
                       Padding(
                         padding: EdgeInsets.only(top: 4, bottom: 8),
                         child: _buildFormField(
@@ -1953,115 +2211,143 @@ $url
               ),
               Container(
                 decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [Color(0xFFEF4444), Color(0xFFEF4444)],
-                  ),
+                  gradient: isUploading ? null : AppTheme.heroGradient,
+                  color: isUploading ? Colors.grey.shade400 : null,
                   borderRadius: BorderRadius.circular(8),
+                  boxShadow: isUploading ? null : AppTheme.heroShadow,
                 ),
                 child: Material(
                   color: Colors.transparent,
                   child: InkWell(
-                    onTap: () async {
-                      if (!formKey.currentState!.validate()) return;
+                    onTap: isUploading
+                        ? null
+                        : () async {
+                            if (!formKey.currentState!.validate()) return;
 
-                      final modules = modulesController.text
-                          .split(',')
-                          .map((value) => value.trim())
-                          .where((value) => value.isNotEmpty)
-                          .toList();
-                      final formateurIds = formateursController.text
-                          .split(',')
-                          .map((value) => value.trim())
-                          .where((value) => value.isNotEmpty)
-                          .toList();
-                      final prix =
-                          double.tryParse(prixController.text.trim()) ?? 0.0;
-                      final prixEnLigne = prixEnLigneController.text.trim().isEmpty
-                          ? null
-                          : double.tryParse(prixEnLigneController.text.trim());
-                      final dureeSemaines =
-                          int.tryParse(dureeController.text.trim()) ?? 0;
-                      final capaciteMax = int.tryParse(
-                        capaciteController.text.trim(),
-                      );
-                      final maxModulesParEtudiant = isStage
-                          ? null
-                          : int.tryParse(maxModulesController.text.trim());
-                      final dateDebut = dateDebutController.text.trim().isEmpty
-                          ? null
-                          : _parseDate(dateDebutController.text.trim());
-                      final dateFin = dateFinController.text.trim().isEmpty
-                          ? null
-                          : _parseDate(dateFinController.text.trim());
-                      final horaires = _parseHoraires(
-                        horairesController.text.trim(),
-                      );
+                            final modules = modulesController.text
+                                .split(',')
+                                .map((value) => value.trim())
+                                .where((value) => value.isNotEmpty)
+                                .toList();
+                            final modulesBonus = modulesBonusController.text
+                                .split(',')
+                                .map((value) => value.trim())
+                                .where((value) => value.isNotEmpty)
+                                .toList();
+                            final modulePrices = _parseModulePrices(modulePricesController.text);
+                            final moduleFormateurIds = _parseModuleFormateurIds(
+                              moduleFormateursController.text,
+                            );
+                            final assignmentError = _validateModuleFormateurIds(
+                              moduleFormateurIds,
+                              modules,
+                            );
+                            if (assignmentError != null) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text(assignmentError)),
+                              );
+                              return;
+                            }
+                            final formateurIds = {
+                              ...formateursController.text
+                                .split(',')
+                                .map((value) => value.trim())
+                                .where((value) => value.isNotEmpty),
+                              ...moduleFormateurIds.values,
+                            }.toList();
+                            final prix =
+                                double.tryParse(prixController.text.trim()) ?? 0.0;
+                            final prixEnLigne = prixEnLigneController.text.trim().isEmpty
+                                ? null
+                                : double.tryParse(prixEnLigneController.text.trim());
+                            final dureeSemaines =
+                                int.tryParse(dureeController.text.trim()) ?? 0;
+                            final capaciteMax = int.tryParse(
+                              capaciteController.text.trim(),
+                            );
+                            final maxModulesParEtudiant = isStage
+                                ? int.tryParse(maxModulesController.text.trim())
+                                : null;
+                            final dateDebut = dateDebutController.text.trim().isEmpty
+                                ? null
+                                : _parseDate(dateDebutController.text.trim());
+                            final dateFin = dateFinController.text.trim().isEmpty
+                                ? null
+                                : _parseDate(dateFinController.text.trim());
+                            final horaires = _parseHoraires(
+                              horairesController.text.trim(),
+                            );
 
-                      final updatedFormation = Formation(
-                        id: formation.id,
-                        titre: titreController.text.trim(),
-                        description: descriptionController.text.trim(),
-                        modules: modules,
-                        imageUrl: imageUrlController.text.trim().isEmpty
-                            ? null
-                            : imageUrlController.text.trim(),
-                        imageFormat: imageFormatValue,
-                        formateurIds: formateurIds,
-                        prix: prix,
-                        prixEnLigne: prixEnLigne,
-                        type: typeValue == 'Présentielle'
-                            ? FormationType.presentielle
-                            : typeValue == 'Mixte'
-                            ? FormationType.mixte
-                            : FormationType.enligne,
-                        status: statusValue == 'En Cours'
-                            ? FormationStatus.enCours
-                            : statusValue == 'Terminée'
-                            ? FormationStatus.terminee
-                            : FormationStatus.programmee,
-                        dureeSemaines: dureeSemaines,
-                        dureeHeures: heuresController.text.trim().isEmpty
-                            ? null
-                            : heuresController.text.trim(),
-                        horaires: horaires,
-                        dateDebut: dateDebut,
-                        dateFin: dateFin,
-                        dateCreation: formation.dateCreation,
-                        capaciteMax: capaciteMax,
-                        nombreInscrits: formation.nombreInscrits,
-                        estStage: isStage,
-                        maxModulesParEtudiant: maxModulesParEtudiant,
-                      );
+                            final updatedFormation = Formation(
+                              id: formation.id,
+                              titre: titreController.text.trim(),
+                              description: descriptionController.text.trim(),
+                              modules: modules,
+                              modulesBonus: modulesBonus,
+                              modulePrices: modulePrices,
+                              moduleFormateurIds: moduleFormateurIds,
+                              imageUrl: imageUrlController.text.trim().isEmpty
+                                  ? null
+                                  : imageUrlController.text.trim(),
+                              imageFormat: imageFormatValue,
+                              formateurIds: formateurIds,
+                              prix: prix,
+                              prixEnLigne: prixEnLigne,
+                              type: typeValue == 'Présentielle'
+                                  ? FormationType.presentielle
+                                  : typeValue == 'Mixte'
+                                  ? FormationType.mixte
+                                  : FormationType.enligne,
+                              status: statusValue == 'En Cours'
+                                  ? FormationStatus.enCours
+                                  : statusValue == 'Terminée'
+                                  ? FormationStatus.terminee
+                                  : FormationStatus.programmee,
+                              dureeSemaines: dureeSemaines,
+                              dureeHeures: heuresController.text.trim().isEmpty
+                                  ? null
+                                  : heuresController.text.trim(),
+                              horaires: horaires,
+                              dateDebut: dateDebut,
+                              dateFin: dateFin,
+                              dateCreation: formation.dateCreation,
+                              capaciteMax: capaciteMax,
+                              nombreInscrits: formation.nombreInscrits,
+                              estStage: isStage,
+                              maxModulesParEtudiant: maxModulesParEtudiant,
+                            );
 
-                      final localContext = context;
-                      try {
-                        await _db.updateFormation(updatedFormation);
-                        if (!localContext.mounted) return;
-                        Navigator.pop(localContext);
-                        ScaffoldMessenger.of(localContext).showSnackBar(
-                          SnackBar(
-                            content: Text('Formation mise à jour'),
-                            backgroundColor: Color(0xFFEF4444),
-                          ),
-                        );
-                      } catch (e) {
-                        if (!localContext.mounted) return;
-                        ScaffoldMessenger.of(localContext).showSnackBar(
-                          SnackBar(
-                            content: Text('Erreur: ${e.toString()}'),
-                            backgroundColor: Color(0xFFEF4444),
-                          ),
-                        );
-                      }
-                    },
+                            setState(() => isUploading = true);
+                            final localContext = context;
+                            try {
+                              await _db.updateFormation(updatedFormation);
+                              if (!localContext.mounted) return;
+                              Navigator.pop(localContext);
+                              ScaffoldMessenger.of(localContext).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Formation mise à jour avec succès'),
+                                  backgroundColor: AppTheme.success,
+                                ),
+                              );
+                            } catch (e) {
+                              if (!localContext.mounted) return;
+                              setState(() => isUploading = false);
+                              ScaffoldMessenger.of(localContext).showSnackBar(
+                                SnackBar(
+                                  content: Text('Erreur: ${e.toString()}'),
+                                  backgroundColor: AppTheme.error,
+                                ),
+                              );
+                            }
+                          },
                     borderRadius: BorderRadius.circular(8),
                     child: Padding(
-                      padding: EdgeInsets.symmetric(
+                      padding: const EdgeInsets.symmetric(
                         horizontal: 20,
                         vertical: 10,
                       ),
                       child: Text(
-                        'Enregistrer',
+                        isUploading ? 'Enregistrement...' : 'Enregistrer',
                         style: GoogleFonts.poppins(
                           color: Colors.white,
                           fontWeight: FontWeight.w600,
@@ -2107,7 +2393,7 @@ $url
           ),
           Container(
             decoration: BoxDecoration(
-              color: Color(0xFFEF4444),
+              color: AppTheme.error,
               borderRadius: BorderRadius.circular(8),
             ),
             child: Material(
@@ -2141,7 +2427,7 @@ $url
       ScaffoldMessenger.of(localContext).showSnackBar(
         SnackBar(
           content: Text('Formation supprimée'),
-          backgroundColor: Color(0xFFEF4444),
+          backgroundColor: AppTheme.error,
         ),
       );
     } catch (e) {
@@ -2149,30 +2435,34 @@ $url
       ScaffoldMessenger.of(localContext).showSnackBar(
         SnackBar(
           content: Text('Erreur: ${e.toString()}'),
-          backgroundColor: Color(0xFFEF4444),
+          backgroundColor: AppTheme.error,
         ),
       );
     }
   }
 
   List<Horaire> _parseHoraires(String rawHoraires) {
-    if (rawHoraires.isEmpty) return [];
-    return rawHoraires.split('\n').map((line) {
-      final parts = line
-          .split(RegExp(r'[;,]'))
-          .map((part) => part.trim())
-          .toList();
+    if (rawHoraires.trim().isEmpty) return [];
+    final lines = rawHoraires.split(RegExp(r'[\r\n]+')).map((l) => l.trim()).where((l) => l.isNotEmpty).toList();
+    return lines.map((line) {
+      final parts = line.split(RegExp(r'[;,]')).map((p) => p.trim()).where((p) => p.isNotEmpty).toList();
       if (parts.length >= 3) {
         return Horaire(
           jour: parts[0],
           heureDebut: parts[1],
           heureFin: parts[2],
         );
+      } else if (parts.length == 2) {
+        return Horaire(
+          jour: parts[0],
+          heureDebut: parts[1],
+          heureFin: 'Fin de cours',
+        );
       }
       return Horaire(
-        jour: parts[0],
-        heureDebut: parts.length > 1 ? parts[1] : '',
-        heureFin: parts.length > 2 ? parts[2] : '',
+        jour: line,
+        heureDebut: '09h00',
+        heureFin: '17h00',
       );
     }).toList();
   }

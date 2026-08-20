@@ -21,6 +21,24 @@ class PdfHelper {
     }
   }
 
+  static Future<void> downloadCSV(
+    Uint8List csvBytes, {
+    required String fileName,
+  }) async {
+    try {
+      final String path = await FileSaver.instance.saveFile(
+        name: fileName,
+        bytes: csvBytes,
+        ext: 'csv',
+        mimeType: MimeType.csv,
+      );
+      debugPrint('✅ CSV téléchargé: $path');
+    } catch (e) {
+      debugPrint('❌ Erreur téléchargement CSV: $e');
+      rethrow;
+    }
+  }
+
   static Future<void> printPDF(Uint8List pdfBytes) async {
     try {
       await Printing.layoutPdf(

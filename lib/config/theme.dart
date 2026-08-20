@@ -20,6 +20,7 @@ class AppTheme {
   static const Color warning = Color(0xFFF59E0B);
   static const Color warningDark = Color(0xFFD97706);
   static const Color info = Color(0xFF06B6D4);
+  static const Color infoDark = Color(0xFF0891B2);
 
   static const Color background = Color(0xFFF8F9FA);
   static const Color surface = Color(0xFFFFFFFF);
@@ -70,25 +71,30 @@ class AppTheme {
   // Shadows
   static List<BoxShadow> get cardShadow => [
     BoxShadow(
-      color: Colors.black.withValues(alpha: 0.04),
-      blurRadius: 16,
-      offset: const Offset(0, 4),
+      color: const Color(0xFF0F172A).withValues(alpha: 0.05),
+      blurRadius: 20,
+      offset: const Offset(0, 6),
+    ),
+    BoxShadow(
+      color: primary.withValues(alpha: 0.03),
+      blurRadius: 8,
+      offset: const Offset(0, 2),
     ),
   ];
 
   static List<BoxShadow> get softShadow => [
     BoxShadow(
-      color: primary.withValues(alpha: 0.08),
-      blurRadius: 12,
-      offset: const Offset(0, 4),
+      color: primary.withValues(alpha: 0.12),
+      blurRadius: 16,
+      offset: const Offset(0, 6),
     ),
   ];
 
   static List<BoxShadow> get heroShadow => [
     BoxShadow(
-      color: primary.withValues(alpha: 0.25),
-      blurRadius: 20,
-      offset: const Offset(0, 8),
+      color: primary.withValues(alpha: 0.28),
+      blurRadius: 24,
+      offset: const Offset(0, 10),
     ),
   ];
 
@@ -122,35 +128,44 @@ class AppTheme {
       color: surface,
       elevation: 0,
       margin: EdgeInsets.zero,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),
+        side: const BorderSide(color: Color(0xFFF1F5F9), width: 1),
+      ),
     ),
     filledButtonTheme: FilledButtonThemeData(
       style: FilledButton.styleFrom(
         backgroundColor: primary,
         foregroundColor: Colors.white,
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        padding: const EdgeInsets.symmetric(horizontal: 26, vertical: 16),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
         textStyle: GoogleFonts.poppins(
           fontSize: 14,
-          fontWeight: FontWeight.w600,
+          fontWeight: FontWeight.w700,
+          letterSpacing: 0.2,
         ),
+        elevation: 2,
+        shadowColor: primary.withValues(alpha: 0.3),
       ),
     ),
     outlinedButtonTheme: OutlinedButtonThemeData(
       style: OutlinedButton.styleFrom(
         foregroundColor: primary,
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-        side: const BorderSide(color: primary, width: 1.5),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        padding: const EdgeInsets.symmetric(horizontal: 26, vertical: 16),
+        side: const BorderSide(color: primary, width: 1.8),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
         textStyle: GoogleFonts.poppins(
           fontSize: 14,
-          fontWeight: FontWeight.w600,
+          fontWeight: FontWeight.w700,
+          letterSpacing: 0.2,
         ),
       ),
     ),
     textButtonTheme: TextButtonThemeData(
       style: TextButton.styleFrom(
         foregroundColor: primary,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
         textStyle: GoogleFonts.poppins(
           fontSize: 14,
           fontWeight: FontWeight.w600,
@@ -164,28 +179,32 @@ class AppTheme {
     ),
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
-      fillColor: surfaceVariant,
-      hintStyle: GoogleFonts.poppins(color: textMuted, fontSize: 14),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      fillColor: const Color(0xFFF8FAFC),
+      hintStyle: GoogleFonts.poppins(color: textMuted, fontSize: 13, fontWeight: FontWeight.w400),
+      labelStyle: GoogleFonts.poppins(color: textSecondary, fontSize: 13, fontWeight: FontWeight.w500),
+      floatingLabelStyle: GoogleFonts.poppins(color: primary, fontSize: 14, fontWeight: FontWeight.w700),
+      prefixIconColor: primary,
+      suffixIconColor: textSecondary,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
       border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide.none,
+        borderRadius: BorderRadius.circular(14),
+        borderSide: const BorderSide(color: Color(0xFFE2E8F0), width: 1.2),
       ),
       enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide.none,
+        borderRadius: BorderRadius.circular(14),
+        borderSide: const BorderSide(color: Color(0xFFE2E8F0), width: 1.2),
       ),
       focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(14),
         borderSide: const BorderSide(color: primary, width: 2),
       ),
       errorBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(14),
         borderSide: const BorderSide(color: error, width: 1.5),
       ),
-      labelStyle: GoogleFonts.poppins(
-        color: textSecondary,
-        fontWeight: FontWeight.w500,
+      focusedErrorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(14),
+        borderSide: const BorderSide(color: error, width: 2),
       ),
     ),
     textTheme: TextTheme(
@@ -250,6 +269,34 @@ class AppTheme {
       selectedTileColor: primary.withValues(alpha: 0.1),
       selectedColor: primary,
     ),
+  );
+}
+
+class AppDecorations {
+  static BoxDecoration glassCard = BoxDecoration(
+    color: AppTheme.surface,
+    borderRadius: BorderRadius.circular(24),
+    border: Border.all(color: const Color(0xFFF1F5F9), width: 1.5),
+    boxShadow: AppTheme.cardShadow,
+  );
+
+  static BoxDecoration sectionBox = BoxDecoration(
+    color: const Color(0xFFF8FAFC),
+    borderRadius: BorderRadius.circular(16),
+    border: Border.all(color: const Color(0xFFE2E8F0), width: 1),
+  );
+
+  static BoxDecoration activeSelectionCard = BoxDecoration(
+    color: AppTheme.primary.withValues(alpha: 0.05),
+    borderRadius: BorderRadius.circular(16),
+    border: Border.all(color: AppTheme.primary, width: 2),
+    boxShadow: AppTheme.softShadow,
+  );
+
+  static BoxDecoration inactiveSelectionCard = BoxDecoration(
+    color: AppTheme.surface,
+    borderRadius: BorderRadius.circular(16),
+    border: Border.all(color: const Color(0xFFE2E8F0), width: 1.2),
   );
 }
 

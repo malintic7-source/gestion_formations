@@ -5,6 +5,7 @@ import 'package:gestion_formations/Models/user.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:gestion_formations/Services/auth_provider.dart';
 import 'package:gestion_formations/Services/db_services.dart';
+import 'package:gestion_formations/Services/imagekit_service.dart';
 import 'package:gestion_formations/config/theme.dart';
 
 class AdminFormateurs extends StatefulWidget {
@@ -23,7 +24,7 @@ class _AdminFormateursState extends State<AdminFormateurs> with TickerProviderSt
   void initState() {
     super.initState();
     _fadeController = AnimationController(
-      duration: Duration(milliseconds: 600),
+      duration: const Duration(milliseconds: 600),
       vsync: this,
     )..forward();
   }
@@ -37,19 +38,48 @@ class _AdminFormateursState extends State<AdminFormateurs> with TickerProviderSt
 
   @override
   Widget build(BuildContext context) {
-    final isMobile = MediaQuery.of(context).size.width < 768;
+    final isMobile = MediaQuery.of(context).size.width < 600;
+    final width = MediaQuery.of(context).size.width;
+    final maxWidth = width > 1200 ? 1100.0 : width * 0.95;
 
-    return SingleChildScrollView(
-      padding: EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _buildHeader(isMobile),
-          SizedBox(height: 28),
-          _buildSearchBar(),
-          SizedBox(height: 28),
-          _buildFormateursStream(context),
-        ],
+    return Center(
+      child: ConstrainedBox(
+        constraints: BoxConstraints(maxWidth: maxWidth),
+        child: SingleChildScrollView(
+          padding: EdgeInsets.symmetric(
+            vertical: isMobile ? 12 : 20,
+            horizontal: isMobile ? 10 : 16,
+          ),
+          child: isMobile
+              ? Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildHeader(isMobile),
+                    const SizedBox(height: 16),
+                    _buildSearchBar(),
+                    const SizedBox(height: 16),
+                    _buildFormateursStream(context),
+                  ],
+                )
+              : Container(
+                  decoration: BoxDecoration(
+                    color: AppTheme.surface,
+                    borderRadius: BorderRadius.circular(24),
+                    boxShadow: AppTheme.cardShadow,
+                  ),
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildHeader(isMobile),
+                      const SizedBox(height: 28),
+                      _buildSearchBar(),
+                      const SizedBox(height: 28),
+                      _buildFormateursStream(context),
+                    ],
+                  ),
+                ),
+        ),
       ),
     );
   }
@@ -57,77 +87,115 @@ class _AdminFormateursState extends State<AdminFormateurs> with TickerProviderSt
   Widget _buildHeader(bool isMobile) {
     return FadeTransition(
       opacity: _fadeController,
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Formateurs',
-                style: GoogleFonts.poppins(
-                  fontSize: 28,
-                  fontWeight: FontWeight.w800,
-                  color: Colors.black87,
-                ),
-              ),
-              SizedBox(height: 4),
-              Text(
-                'Gérez les formateurs de votre plateforme',
-                style: GoogleFonts.poppins(
-                  fontSize: 13,
-                  color: Colors.black54,
-                  fontWeight: FontWeight.w400,
-                ),
-              ),
-            ],
-          ),
-          if (!isMobile)
-            Container(
-              decoration: BoxDecoration(
-                gradient: AppTheme.primaryGradient,
-                borderRadius: BorderRadius.circular(12),
-                boxShadow: [
-                  BoxShadow(
-                    color: AppTheme.primary.withValues(alpha: 0.3),
-                    blurRadius: 16,
-                    offset: Offset(0, 6),
+      child: isMobile
+          ? Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  'Gérez les formateurs et les affectations manuelles',
+                  style: GoogleFonts.poppins(
+                    fontSize: 12,
+                    color: AppTheme.textSecondary,
+                    fontWeight: FontWeight.w400,
+                    height: 1.3,
                   ),
-                ],
-              ),
-              child: Material(
-                color: Colors.transparent,
-                child: InkWell(
-                  onTap: () => _showCreateFormateurDialog(),
-                  borderRadius: BorderRadius.circular(12),
-                  child: Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                    child: Row(
-                      children: [
-                        Icon(Icons.add_rounded, color: Colors.white, size: 20),
-                        SizedBox(width: 8),
-                        Text(
-                          'Ajouter',
-                          style: GoogleFonts.poppins(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w600,
-                            fontSize: 14,
+                ),
+                const SizedBox(height: 10),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      gradient: AppTheme.heroGradient,
+                      borderRadius: BorderRadius.circular(10),
+                      boxShadow: AppTheme.heroShadow,
+                    ),
+                    child: Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        onTap: () => _showAddFormateurDialog(),
+                        borderRadius: BorderRadius.circular(10),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.add_rounded, color: Colors.white, size: 18),
+                              const SizedBox(width: 6),
+                              Text(
+                                'Nouveau Formateur',
+                                style: GoogleFonts.poppins(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-                      ],
+                      ),
                     ),
                   ),
                 ),
-              ),
+              ],
+            )
+          : Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Formateurs',
+                      style: GoogleFonts.poppins(
+                        fontSize: 28,
+                        fontWeight: FontWeight.w800,
+                        color: Colors.black87,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Gérez les formateurs et les affectations manuelles',
+                      style: GoogleFonts.poppins(
+                        fontSize: 13,
+                        color: Colors.black54,
+                        fontWeight: FontWeight.w400,
+                      ),
+                    ),
+                  ],
+                ),
+                Container(
+                  decoration: BoxDecoration(
+                    gradient: AppTheme.heroGradient,
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: AppTheme.heroShadow,
+                  ),
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap: () => _showAddFormateurDialog(),
+                      borderRadius: BorderRadius.circular(12),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.add_rounded, color: Colors.white, size: 20),
+                            const SizedBox(width: 8),
+                            Text(
+                              'Ajouter',
+                              style: GoogleFonts.poppins(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w600,
+                                fontSize: 14,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
-          if (isMobile)
-            FloatingActionButton(
-              onPressed: () => _showCreateFormateurDialog(),
-              backgroundColor: AppTheme.primary,
-              child: Icon(Icons.add_rounded),
-            ),
-        ],
-      ),
     );
   }
 
@@ -139,7 +207,7 @@ class _AdminFormateursState extends State<AdminFormateurs> with TickerProviderSt
           BoxShadow(
             color: AppTheme.primary.withValues(alpha: 0.08),
             blurRadius: 12,
-            offset: Offset(0, 4),
+            offset: const Offset(0, 4),
           ),
         ],
       ),
@@ -158,7 +226,7 @@ class _AdminFormateursState extends State<AdminFormateurs> with TickerProviderSt
             fontSize: 14,
             color: Colors.black38,
           ),
-          prefixIcon: Icon(
+          prefixIcon: const Icon(
             Icons.search_rounded,
             color: AppTheme.primary,
             size: 20,
@@ -167,7 +235,7 @@ class _AdminFormateursState extends State<AdminFormateurs> with TickerProviderSt
             borderRadius: BorderRadius.circular(12),
             borderSide: BorderSide.none,
           ),
-          contentPadding: EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+          contentPadding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
         ),
         onChanged: (value) => setState(() {}),
       ),
@@ -184,7 +252,6 @@ class _AdminFormateursState extends State<AdminFormateurs> with TickerProviderSt
               valueColor: AlwaysStoppedAnimation(AppTheme.primary),
             ),
           );
-
         }
 
         final allUsers = snapshot.data ?? [];
@@ -193,10 +260,11 @@ class _AdminFormateursState extends State<AdminFormateurs> with TickerProviderSt
         final filtered = formateurs.where((user) {
           final nomComplet = user.nomComplet.toLowerCase();
           final email = user.email.toLowerCase();
+          final phone = user.phone.toLowerCase();
           final query = searchController.text.trim().toLowerCase();
 
           if (query.isEmpty) return true;
-          return nomComplet.contains(query) || email.contains(query);
+          return nomComplet.contains(query) || email.contains(query) || phone.contains(query);
         }).toList();
 
         if (filtered.isEmpty) {
@@ -243,13 +311,22 @@ class _AdminFormateursState extends State<AdminFormateurs> with TickerProviderSt
     final nom = data['nom'] ?? '';
     final email = data['email'] ?? '';
     final assigned = data['assignedFormations'] as List<dynamic>? ?? [];
+    final assignedFormations = _db.getFormationsForFormateur(userId);
+    final assignedModules = assignedFormations
+        .expand((formation) {
+          final mods = _db.getModulesForFormateur(formation, userId);
+          if (mods.isEmpty || (mods.length == 1 && mods.first == formation.titre)) {
+            return ['${formation.titre} (Formation complète)'];
+          }
+          return mods.map((module) => '${formation.titre} · $module');
+        })
+        .toList();
 
     int totalAssignedHours = 0;
     int totalDoneHours = 0;
 
     for (final a in assigned) {
       final modules = a['modules'] as List<dynamic>? ?? [];
-      
       for (final m in modules) {
         final assignedH = (m['assignedHours'] ?? 0) as num;
         final doneH = (m['doneHours'] ?? 0) as num;
@@ -258,78 +335,91 @@ class _AdminFormateursState extends State<AdminFormateurs> with TickerProviderSt
       }
     }
 
+    if (totalAssignedHours == 0) {
+      for (final f in assignedFormations) {
+        final match = RegExp(r'\d+').firstMatch(f.dureeHeures ?? '');
+        final h = int.tryParse(match?.group(0) ?? '') ?? (f.dureeSemaines * 10 > 0 ? f.dureeSemaines * 10 : 30);
+        totalAssignedHours += h;
+      }
+    }
+
     final progress = totalAssignedHours == 0 ? 0.0 : (totalDoneHours / totalAssignedHours).clamp(0.0, 1.0);
+
+    final phone = (data['phone'] ?? '').toString();
+    final specialite = (data['specialite'] ?? '').toString();
+    final matricule = (data['matricule'] ?? '').toString();
 
     return SlideInUp(
       delay: Duration(milliseconds: 50 + (index * 40)),
-      duration: Duration(milliseconds: 600),
+      duration: const Duration(milliseconds: 600),
       child: Container(
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(16),
           color: Colors.white,
+          border: Border.all(color: const Color(0xFFE2E8F0)),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.05),
+              color: Colors.black.withValues(alpha: 0.04),
               blurRadius: 12,
-              offset: Offset(0, 4),
+              offset: const Offset(0, 4),
             ),
           ],
         ),
         child: Padding(
-          padding: EdgeInsets.all(16),
+          padding: const EdgeInsets.all(16),
           child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Container(
-                width: 50,
-                height: 50,
+                width: 52,
+                height: 52,
                 decoration: BoxDecoration(
-                  gradient: LinearGradient(
+                  gradient: const LinearGradient(
                     colors: [AppTheme.primary, AppTheme.primaryDark],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
                   ),
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(14),
                   boxShadow: [
                     BoxShadow(
                       color: AppTheme.primary.withValues(alpha: 0.3),
                       blurRadius: 8,
-                      offset: Offset(0, 3),
+                      offset: const Offset(0, 3),
                     ),
                   ],
                 ),
-                child: Icon(
-                  Icons.school_rounded,
-                  color: Colors.white,
-                  size: 24,
+                child: Center(
+                  child: Text(
+                    prenom.isNotEmpty ? prenom[0].toUpperCase() : 'F',
+                    style: GoogleFonts.poppins(
+                      color: Colors.white,
+                      fontSize: 20,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
                 ),
               ),
-              SizedBox(width: 16),
+              const SizedBox(width: 16),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      '$prenom $nom',
-                      style: GoogleFonts.poppins(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w700,
-                        color: Colors.black87,
-                      ),
-                    ),
-                    SizedBox(height: 4),
-                    Text(
-                      email,
-                      style: GoogleFonts.poppins(
-                        fontSize: 12,
-                        color: Colors.black54,
-                        fontWeight: FontWeight.w400,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    SizedBox(height: 8),
-                    Row(
+                    // Name and Status Badges
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 4,
+                      crossAxisAlignment: WrapCrossAlignment.center,
                       children: [
+                        Text(
+                          '$prenom $nom',
+                          style: GoogleFonts.poppins(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.black87,
+                          ),
+                        ),
                         Container(
-                          padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                           decoration: BoxDecoration(
                             color: AppTheme.primary.withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(6),
@@ -343,12 +433,11 @@ class _AdminFormateursState extends State<AdminFormateurs> with TickerProviderSt
                             ),
                           ),
                         ),
-                        SizedBox(width: 8),
                         Container(
-                          padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                           decoration: BoxDecoration(
                             color: (data['estActif'] ?? true)
-                                ? Color(0xFF10B981).withValues(alpha: 0.1)
+                                ? AppTheme.success.withValues(alpha: 0.1)
                                 : Colors.black.withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(6),
                           ),
@@ -361,17 +450,17 @@ class _AdminFormateursState extends State<AdminFormateurs> with TickerProviderSt
                                     : Icons.cancel_rounded,
                                 size: 12,
                                 color: (data['estActif'] ?? true)
-                                    ? Color(0xFF10B981)
+                                    ? AppTheme.success
                                     : Colors.black54,
                               ),
-                              SizedBox(width: 4),
+                              const SizedBox(width: 4),
                               Text(
                                 (data['estActif'] ?? true) ? 'Actif' : 'Inactif',
                                 style: GoogleFonts.poppins(
                                   fontSize: 11,
                                   fontWeight: FontWeight.w600,
                                   color: (data['estActif'] ?? true)
-                                      ? Color(0xFF10B981)
+                                      ? AppTheme.success
                                       : Colors.black54,
                                 ),
                               ),
@@ -380,24 +469,140 @@ class _AdminFormateursState extends State<AdminFormateurs> with TickerProviderSt
                         ),
                       ],
                     ),
-                    SizedBox(height: 10),
+
+                    const SizedBox(height: 6),
+
+                    // Specialty Highlight Badge
+                    if (specialite.isNotEmpty) ...[
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFEEF2FF),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: const Color(0xFFC7D2FE)),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.stars_rounded, size: 14, color: AppTheme.primary),
+                            const SizedBox(width: 5),
+                            Text(
+                              'Spécialité : $specialite',
+                              style: GoogleFonts.poppins(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                                color: AppTheme.primary,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                    ],
+
+                    // Contacts & Identifiers
+                    Wrap(
+                      spacing: 16,
+                      runSpacing: 6,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: [
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.email_outlined, size: 14, color: Colors.grey.shade600),
+                            const SizedBox(width: 4),
+                            Text(
+                              email,
+                              style: GoogleFonts.poppins(
+                                fontSize: 12,
+                                color: Colors.black87,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
+                        if (phone.isNotEmpty)
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.phone_outlined, size: 14, color: Colors.grey.shade600),
+                              const SizedBox(width: 4),
+                              Text(
+                                phone,
+                                style: GoogleFonts.poppins(
+                                  fontSize: 12,
+                                  color: Colors.black87,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ],
+                          ),
+                        if (matricule.isNotEmpty)
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.badge_outlined, size: 14, color: Colors.grey.shade600),
+                              const SizedBox(width: 4),
+                              Text(
+                                'Matricule : $matricule',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 11,
+                                  color: Colors.black54,
+                                ),
+                              ),
+                            ],
+                          ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 10),
+
+                    // Hours & Progression
                     Text(
-                      '$totalDoneHours / $totalAssignedHours heures (${(progress * 100).toStringAsFixed(0)}%) • ${assigned.length} formations',
+                      '$totalDoneHours / $totalAssignedHours heures (${(progress * 100).toStringAsFixed(0)}%) • ${assignedFormations.length} formation${assignedFormations.length > 1 ? 's' : ''} · ${assignedModules.length} module${assignedModules.length > 1 ? 's' : ''}',
                       style: GoogleFonts.poppins(
                         fontSize: 11,
+                        fontWeight: FontWeight.w600,
                         color: Colors.black54,
                       ),
                     ),
-                    SizedBox(height: 6),
+                    const SizedBox(height: 6),
                     ClipRRect(
                       borderRadius: BorderRadius.circular(4),
                       child: LinearProgressIndicator(
                         value: progress,
                         minHeight: 6,
                         backgroundColor: Colors.black.withValues(alpha: 0.08),
-                        valueColor: AlwaysStoppedAnimation(AppTheme.primary),
+                        valueColor: const AlwaysStoppedAnimation(AppTheme.primary),
                       ),
                     ),
+
+                    // Assigned Modules Tags
+                    if (assignedModules.isNotEmpty) ...[
+                      const SizedBox(height: 10),
+                      Wrap(
+                        spacing: 6,
+                        runSpacing: 5,
+                        children: assignedModules.map((mod) {
+                          return Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: AppTheme.primary.withValues(alpha: 0.08),
+                              borderRadius: BorderRadius.circular(6),
+                              border: Border.all(color: AppTheme.primary.withValues(alpha: 0.2)),
+                            ),
+                            child: Text(
+                              mod,
+                              style: GoogleFonts.poppins(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                                color: AppTheme.primary,
+                              ),
+                            ),
+                          );
+                        }).toList(),
+                      ),
+                    ],
                   ],
                 ),
               ),
@@ -406,6 +611,9 @@ class _AdminFormateursState extends State<AdminFormateurs> with TickerProviderSt
                 onSelected: (value) async {
                   if (value == 'voir') {
                     _showFormateurDetail(userId, data);
+                  } else if (value == 'modifier') {
+                    final user = _db.getUserById(userId);
+                    if (user != null) _showEditFormateurDialog(user);
                   } else if (value == 'attribuer') {
                     await _assignFormationDialog(userId);
                   } else if (value == 'emploi') {
@@ -427,12 +635,22 @@ class _AdminFormateursState extends State<AdminFormateurs> with TickerProviderSt
                     ),
                   ),
                   PopupMenuItem(
+                    value: 'modifier',
+                    child: Row(
+                      children: [
+                        Icon(Icons.edit_rounded, size: 18),
+                        SizedBox(width: 8),
+                        Text('Modifier'),
+                      ],
+                    ),
+                  ),
+                  PopupMenuItem(
                     value: 'attribuer',
                     child: Row(
                       children: [
                         Icon(Icons.assignment_rounded, size: 18),
                         SizedBox(width: 8),
-                        Text('Attribuer'),
+                        Text('Affectations'),
                       ],
                     ),
                   ),
@@ -483,171 +701,559 @@ class _AdminFormateursState extends State<AdminFormateurs> with TickerProviderSt
   }
 
   Future<void> _toggleBlockUser(String userId, bool block) async {
+    await _db.setUserActive(userId, !block);
     if (!mounted) return;
-    final localContext = context;
-    ScaffoldMessenger.of(localContext).showSnackBar(SnackBar(content: Text(block ? 'Formateur bloqué' : 'Formateur désactivé')));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(block ? 'Formateur bloqué' : 'Formateur débloqué')),
+    );
   }
 
   Future<void> _assignFormationDialog(String userId) async {
     if (!mounted) return;
-    final dialogContext = context;
+    final formations = _db.getFormations();
+    final selectedModulesByFormation = <String, Set<String>>{
+      for (final formation in formations)
+        formation.id: _db.getModulesForFormateur(formation, userId).toSet(),
+    };
     await showDialog(
-      context: dialogContext,
-      builder: (context) => AlertDialog(
-        title: Text('Attribuer une formation', style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w700)),
-        content: Text('Attribuer la formation sélectionnée à ce formateur ?'),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: Text('Annuler')),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              ScaffoldMessenger.of(dialogContext).showSnackBar(SnackBar(content: Text('✅ Formation attribuée')));
-            },
-            child: Text('Attribuer'),
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: Text('Affecter formations et modules', style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w700)),
+          content: SizedBox(
+            width: 560,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Cochez les formations et modules dispensés par ce formateur. Toutes les formations (SFP ou standard) sont sélectionnables.',
+                    style: GoogleFonts.poppins(fontSize: 12, color: Colors.black54),
+                  ),
+                  const SizedBox(height: 12),
+                  ...formations.map((formation) {
+                    final selected = selectedModulesByFormation[formation.id] ?? <String>{};
+                    final hasModules = formation.modules.isNotEmpty;
+                    final isAllSelected = hasModules
+                        ? formation.modules.every((m) => selected.contains(m))
+                        : selected.isNotEmpty;
+
+                    return Container(
+                      margin: const EdgeInsets.only(bottom: 12),
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: isAllSelected || selected.isNotEmpty
+                            ? AppTheme.primary.withValues(alpha: 0.04)
+                            : Colors.grey.shade50,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color: isAllSelected || selected.isNotEmpty
+                              ? AppTheme.primary.withValues(alpha: 0.4)
+                              : Colors.grey.shade300,
+                        ),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Checkbox(
+                                value: isAllSelected ? true : (selected.isNotEmpty ? null : false),
+                                tristate: hasModules && selected.isNotEmpty && !isAllSelected,
+                                onChanged: (checked) => setDialogState(() {
+                                  if (checked == true) {
+                                    if (hasModules) {
+                                      selectedModulesByFormation[formation.id] = formation.modules.toSet();
+                                    } else {
+                                      selectedModulesByFormation[formation.id] = {formation.titre};
+                                    }
+                                  } else {
+                                    selectedModulesByFormation[formation.id] = <String>{};
+                                  }
+                                }),
+                              ),
+                              Expanded(
+                                child: Text(
+                                  formation.titre,
+                                  style: GoogleFonts.poppins(fontWeight: FontWeight.w700, fontSize: 13),
+                                ),
+                              ),
+                              if (formation.estStage)
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFFFF7ED),
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: Text('Stage SFP', style: GoogleFonts.poppins(fontSize: 10, color: const Color(0xFFC2410C), fontWeight: FontWeight.w600)),
+                                ),
+                            ],
+                          ),
+                          if (hasModules) ...[
+                            const SizedBox(height: 4),
+                            ...formation.modules.map((module) => CheckboxListTile(
+                              dense: true,
+                              contentPadding: const EdgeInsets.only(left: 28),
+                              value: selected.contains(module),
+                              title: Text(module, style: GoogleFonts.poppins(fontSize: 12)),
+                              onChanged: (checked) => setDialogState(() {
+                                if (checked == true) {
+                                  selectedModulesByFormation.putIfAbsent(formation.id, () => <String>{}).add(module);
+                                } else {
+                                  selectedModulesByFormation[formation.id]?.remove(module);
+                                }
+                              }),
+                            )),
+                          ],
+                        ],
+                      ),
+                    );
+                  }),
+                ],
+              ),
+            ),
           ),
-        ],
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Annuler'),
+            ),
+            StatefulBuilder(
+              builder: (context, setBtnState) {
+                bool isSaving = false;
+                return ElevatedButton.icon(
+                  icon: isSaving
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                        )
+                      : const Icon(Icons.save_rounded, size: 18),
+                  label: Text(isSaving ? 'Enregistrement...' : 'Enregistrer'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: isSaving ? Colors.grey.shade400 : AppTheme.primary,
+                    foregroundColor: Colors.white,
+                  ),
+                  onPressed: isSaving
+                      ? null
+                      : () async {
+                          setBtnState(() => isSaving = true);
+                          try {
+                            await _db.replaceFormateurAssignments(
+                              userId,
+                              selectedModulesByFormation.map((id, modules) => MapEntry(id, modules.toList())),
+                            );
+                            if (!dialogContext.mounted) return;
+                            Navigator.pop(dialogContext);
+                            if (mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Affectations du formateur enregistrées avec succès.'),
+                                  backgroundColor: AppTheme.success,
+                                ),
+                              );
+                              setState(() {});
+                            }
+                          } catch (e) {
+                            if (!dialogContext.mounted) return;
+                            setBtnState(() => isSaving = false);
+                            ScaffoldMessenger.of(dialogContext).showSnackBar(
+                              SnackBar(content: Text('Erreur: $e'), backgroundColor: AppTheme.error),
+                            );
+                          }
+                        },
+                );
+              },
+            ),
+          ],
+        ),
       ),
     );
   }
 
-  void _showCreateFormateurDialog() {
+  Future<void> _showAddFormateurDialog() async {
     final prenomController = TextEditingController();
     final nomController = TextEditingController();
     final emailController = TextEditingController();
     final phoneController = TextEditingController();
-    
+    final specialiteController = TextEditingController();
+    final passwordController = TextEditingController(text: '00000000');
+    String selectedSexe = 'Homme';
+    String? uploadedPhotoUrl;
+    bool isUploadingPhoto = false;
+    final formations = _db.getFormations();
+    final selectedModulesByFormation = <String, Set<String>>{
+      for (final formation in formations) formation.id: <String>{},
+    };
 
-    showDialog(
+    await showDialog(
       context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setState) => AlertDialog(
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
           title: Text(
             'Créer un formateur',
             style: GoogleFonts.poppins(fontWeight: FontWeight.w700),
           ),
-          content: SingleChildScrollView(
+          content: SizedBox(
+            width: 620,
+            child: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                  Text(
+                    'Informations personnelles',
+                    style: GoogleFonts.poppins(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.black87,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
                 TextField(
                   controller: prenomController,
-                  decoration: InputDecoration(
-                    labelText: 'Prénom',
+                  decoration: const InputDecoration(
+                      labelText: 'Prénom *',
                     prefixIcon: Icon(Icons.person_rounded),
                   ),
                 ),
-                SizedBox(height: 12),
+                const SizedBox(height: 12),
                 TextField(
                   controller: nomController,
-                  decoration: InputDecoration(
-                    labelText: 'Nom',
+                  decoration: const InputDecoration(
+                      labelText: 'Nom *',
                     prefixIcon: Icon(Icons.person_rounded),
                   ),
                 ),
-                SizedBox(height: 12),
+                const SizedBox(height: 12),
                 TextField(
                   controller: emailController,
-                  decoration: InputDecoration(
-                    labelText: 'Email',
+                  decoration: const InputDecoration(
+                      labelText: 'Email *',
                     prefixIcon: Icon(Icons.email_rounded),
                   ),
                   keyboardType: TextInputType.emailAddress,
                 ),
-                SizedBox(height: 12),
+                const SizedBox(height: 12),
                 TextField(
                   controller: phoneController,
-                  decoration: InputDecoration(
+                  decoration: const InputDecoration(
                     labelText: 'Téléphone',
                     prefixIcon: Icon(Icons.phone_rounded),
                   ),
                   keyboardType: TextInputType.phone,
                 ),
-                SizedBox(height: 16),
-                Container(
-                  padding: EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: AppTheme.primary.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    'Mot de passe par défaut: 00000000',
-                    style: GoogleFonts.poppins(
-                      fontSize: 12,
-                      color: AppTheme.primary,
-                      fontWeight: FontWeight.w500,
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: specialiteController,
+                    decoration: const InputDecoration(
+                      labelText: 'Spécialité',
+                      prefixIcon: Icon(Icons.school_rounded),
+                      helperText: 'Ex: Web Development, Flutter, Réseaux, Design Graphique, etc.',
                     ),
                   ),
-                ),
-              ],
+                  const SizedBox(height: 12),
+                  DropdownButtonFormField<String>(
+                    initialValue: selectedSexe,
+                    decoration: const InputDecoration(
+                      labelText: 'Sexe *',
+                      prefixIcon: Icon(Icons.wc_rounded),
+                    ),
+                    items: const [
+                      DropdownMenuItem(value: 'Homme', child: Text('Homme')),
+                      DropdownMenuItem(value: 'Femme', child: Text('Femme')),
+                    ],
+                    onChanged: (value) {
+                      if (value != null) {
+                        setDialogState(() => selectedSexe = value);
+                      }
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: passwordController,
+                    decoration: const InputDecoration(
+                      labelText: 'Mot de passe initial',
+                      prefixIcon: Icon(Icons.lock_rounded),
+                      helperText: 'Par défaut : 00000000',
+                    ),
+                    obscureText: true,
+                  ),
+                const SizedBox(height: 16),
+                  Text(
+                    'Photo de profil',
+                    style: GoogleFonts.poppins(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.black87,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      CircleAvatar(
+                        radius: 28,
+                        backgroundColor: AppTheme.primary.withValues(alpha: 0.1),
+                        backgroundImage: uploadedPhotoUrl != null
+                            ? NetworkImage(uploadedPhotoUrl!)
+                            : null,
+                        child: uploadedPhotoUrl == null
+                            ? Icon(Icons.person_rounded, color: AppTheme.primary)
+                            : null,
+                      ),
+                      const SizedBox(width: 12),
+                      OutlinedButton.icon(
+                        onPressed: isUploadingPhoto
+                            ? null
+                            : () async {
+                                setDialogState(() => isUploadingPhoto = true);
+                                try {
+                                  final url = await ImageKitService()
+                                      .pickAndUploadImage(folder: 'formateurs');
+                                  if (!context.mounted) return;
+                                  setDialogState(() {
+                                    uploadedPhotoUrl = url;
+                                    isUploadingPhoto = false;
+                                  });
+                                } catch (e) {
+                                  if (!context.mounted) return;
+                                  setDialogState(() => isUploadingPhoto = false);
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(content: Text('Erreur photo : $e')),
+                                  );
+                                }
+                              },
+                        icon: isUploadingPhoto
+                            ? SizedBox(
+                                width: 16,
+                                height: 16,
+                                child: CircularProgressIndicator(strokeWidth: 2),
+                              )
+                            : const Icon(Icons.photo_camera_rounded, size: 18),
+                        label: Text(uploadedPhotoUrl == null ? 'Ajouter' : 'Changer'),
+                      ),
+                      if (uploadedPhotoUrl != null) ...[
+                        const SizedBox(width: 8),
+                        IconButton(
+                          onPressed: () => setDialogState(() => uploadedPhotoUrl = null),
+                          icon: const Icon(Icons.delete_outline_rounded, color: Colors.red),
+                          tooltip: 'Supprimer la photo',
+                        ),
+                      ],
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+                  Text(
+                    'Affectations formations & modules',
+                    style: GoogleFonts.poppins(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.black87,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Sélectionnez les modules que ce formateur dispensera. Vous pourrez les modifier plus tard.',
+                    style: GoogleFonts.poppins(fontSize: 12, color: Colors.black54),
+                  ),
+                  const SizedBox(height: 12),
+                  ...formations.map((formation) {
+                    final selected = selectedModulesByFormation[formation.id] ?? <String>{};
+                    final hasModules = formation.modules.isNotEmpty;
+                    final isAllSelected = hasModules
+                        ? formation.modules.every((m) => selected.contains(m))
+                        : selected.isNotEmpty;
+
+                    return Container(
+                      margin: const EdgeInsets.only(bottom: 10),
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: isAllSelected || selected.isNotEmpty
+                            ? AppTheme.primary.withValues(alpha: 0.04)
+                            : Colors.grey.shade50,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color: isAllSelected || selected.isNotEmpty
+                              ? AppTheme.primary.withValues(alpha: 0.4)
+                              : Colors.grey.shade300,
+                        ),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Checkbox(
+                                value: isAllSelected ? true : (selected.isNotEmpty ? null : false),
+                                tristate: hasModules && selected.isNotEmpty && !isAllSelected,
+                                onChanged: (checked) => setDialogState(() {
+                                  if (checked == true) {
+                                    if (hasModules) {
+                                      selectedModulesByFormation[formation.id] = formation.modules.toSet();
+                                    } else {
+                                      selectedModulesByFormation[formation.id] = {formation.titre};
+                                    }
+                                  } else {
+                                    selectedModulesByFormation[formation.id] = <String>{};
+                                  }
+                                }),
+                              ),
+                              Expanded(
+                                child: Text(
+                                  formation.titre,
+                                  style: GoogleFonts.poppins(fontWeight: FontWeight.w700, fontSize: 13),
+                                ),
+                              ),
+                              if (formation.estStage)
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFFFF7ED),
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: Text('Stage SFP', style: GoogleFonts.poppins(fontSize: 10, color: const Color(0xFFC2410C), fontWeight: FontWeight.w600)),
+                                ),
+                            ],
+                          ),
+                          if (hasModules) ...[
+                            const SizedBox(height: 4),
+                            ...formation.modules.map((module) => CheckboxListTile(
+                              dense: true,
+                              contentPadding: const EdgeInsets.only(left: 28),
+                              value: selected.contains(module),
+                              title: Text(module, style: GoogleFonts.poppins(fontSize: 12)),
+                              onChanged: (checked) => setDialogState(() {
+                                if (checked == true) {
+                                  selectedModulesByFormation.putIfAbsent(formation.id, () => <String>{}).add(module);
+                                } else {
+                                  selectedModulesByFormation[formation.id]?.remove(module);
+                                }
+                              }),
+                            )),
+                          ],
+                        ],
+                      ),
+                    );
+                  }),
+                ],
+              ),
             ),
           ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: Text('Annuler'),
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Annuler'),
             ),
-            Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [AppTheme.primary, AppTheme.primaryDark],
-                ),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Material(
-                color: Colors.transparent,
-                child: InkWell(
-                  onTap: () async {
-                    final localContext = context;
-                    if (prenomController.text.isEmpty ||
-                        nomController.text.isEmpty ||
-                        emailController.text.isEmpty) {
-                      ScaffoldMessenger.of(localContext).showSnackBar(
-                        SnackBar(content: Text('Veuillez remplir tous les champs')),
+            ElevatedButton.icon(
+              icon: const Icon(Icons.person_add_rounded),
+              label: const Text('Créer le formateur'),
+              onPressed: () async {
+                    final prenom = prenomController.text.trim();
+                    final nom = nomController.text.trim();
+                    final email = emailController.text.trim().toLowerCase();
+                    final phone = phoneController.text.trim();
+                final password = passwordController.text.trim().isEmpty
+                    ? '00000000'
+                    : passwordController.text.trim();
+
+                    if (prenom.isEmpty || nom.isEmpty || email.isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text(
+                        'Veuillez remplir tous les champs obligatoires (prénom, nom, email).',
+                      ),
+                    ),
+                      );
+                      return;
+                    }
+
+                    final emailRegExp = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+');
+                    if (!emailRegExp.hasMatch(email)) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Veuillez fournir une adresse email valide.'),
+                    ),
+                      );
+                      return;
+                    }
+
+                if (password.length < 6) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Le mot de passe doit contenir au moins 6 caractères.'),
+                    ),
+                  );
+                  return;
+                }
+
+                final existingUser = _db
+                    .getUsers()
+                    .where((u) => u.email.toLowerCase() == email)
+                    .firstOrNull;
+                    if (existingUser != null) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Un compte avec cette adresse email existe déjà.'),
+                    ),
                       );
                       return;
                     }
 
                     try {
-                      await AuthProvider().createUserByAdmin(
-                        email: emailController.text,
-                        nom: nomController.text,
-                        prenom: prenomController.text,
-                        phone: phoneController.text,
+                      final formateur = await AuthProvider().createUserByAdmin(
+                        email: email,
+                        nom: nom,
+                        prenom: prenom,
+                        phone: phone,
                         role: UserRole.formateur,
-                      );
+                    sexe: selectedSexe,
+                    password: password,
+                    photoUrl: uploadedPhotoUrl,
+                    specialite: specialiteController.text.trim().isEmpty 
+                        ? null 
+                        : specialiteController.text.trim(),
+                  );
 
-                      if (!localContext.mounted) return;
-                      Navigator.pop(localContext);
-                      ScaffoldMessenger.of(localContext).showSnackBar(
-                        SnackBar(
-                          content: Text('Formateur créé avec succès'),
-                          backgroundColor: AppTheme.primary,
+                  if (formateur == null) return;
+
+                  final hasManualAssignments = selectedModulesByFormation.values
+                      .any((modules) => modules.isNotEmpty);
+
+                  if (hasManualAssignments) {
+                    await _db.replaceFormateurAssignments(
+                      formateur.id,
+                      selectedModulesByFormation.map(
+                        (id, modules) => MapEntry(id, modules.toList()),
+                      ),
+                    );
+                  }
+
+                  if (!context.mounted) return;
+                  Navigator.pop(dialogContext);
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          hasManualAssignments
+                              ? 'Formateur créé avec ses affectations manuelles.'
+                              : 'Formateur créé avec succès.',
                         ),
-                      );
+                        backgroundColor: AppTheme.success,
+                      ),
+                    );
+                    setState(() {});
+                  }
                     } catch (e) {
-                      if (!localContext.mounted) return;
-                      ScaffoldMessenger.of(localContext).showSnackBar(
+                  if (!context.mounted) return;
+                  ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
-                          content: Text('Erreur: ${e.toString()}'),
-                          backgroundColor: Color(0xFFEF4444),
+                          content: Text('Erreur : $e'),
+                          backgroundColor: Colors.red,
                         ),
                       );
                     }
                   },
-                  borderRadius: BorderRadius.circular(8),
-                  child: Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                    child: Text(
-                      'Créer',
-                      style: GoogleFonts.poppins(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w600,
-                        fontSize: 14,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
             ),
           ],
         ),
@@ -710,6 +1316,44 @@ class _AdminFormateursState extends State<AdminFormateurs> with TickerProviderSt
                         ),
                       ],
                     ),
+                  ),
+                  if ((data['phone'] ?? '').toString().trim().isNotEmpty) ...[
+                    SizedBox(height: 10),
+                    Container(
+                      padding: EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade50,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.grey.shade200),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(Icons.phone_rounded, color: Colors.black54, size: 18),
+                          SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              data['phone'] ?? '',
+                              style: GoogleFonts.poppins(
+                                fontSize: 12,
+                                color: Colors.black87,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                  SizedBox(height: 10),
+                  Row(
+                    children: [
+                      _buildInfoChip(Icons.wc_rounded, data['sexe'] ?? 'Homme'),
+                      SizedBox(width: 8),
+                      _buildInfoChip(
+                        (data['estActif'] ?? true) ? Icons.check_circle_rounded : Icons.block_rounded,
+                        (data['estActif'] ?? true) ? 'Actif' : 'Inactif',
+                      ),
+                    ],
                   ),
                   SizedBox(height: 20),
                   if (assignedCopy.isEmpty)
@@ -941,7 +1585,10 @@ class _AdminFormateursState extends State<AdminFormateurs> with TickerProviderSt
                         );
                       }
 
-                      final schedules = scheduleSnapshot.data ?? [];
+                      final schedules = (scheduleSnapshot.data ?? [])
+                          .where((formation) =>
+                              _db.getModulesForFormateur(formation, userId).isNotEmpty)
+                          .toList();
 
                       if (schedules.isEmpty) {
                         return SizedBox.shrink();
@@ -985,13 +1632,44 @@ class _AdminFormateursState extends State<AdminFormateurs> with TickerProviderSt
                                       ),
                                     ),
                                     SizedBox(height: 8),
-                                    ...formation.modules.map((m) {
+                                    ..._db.getModulesForFormateur(formation, userId).map((moduleName) {
+                                      final horaires = formation.horaires.where((h) {
+                                        return h.module?.isEmpty != false ||
+                                            h.module == moduleName;
+                                      });
                                       return Padding(
-                                        padding: EdgeInsets.only(bottom: 4),
-                                        child: Text(
-                                          '• $m',
-                                          style: GoogleFonts.poppins(fontSize: 12, color: Colors.black54),
-                                        ),
+                                        padding: const EdgeInsets.only(bottom: 6),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                                            Text(
+                                              moduleName,
+                                              style: GoogleFonts.poppins(
+                                                fontSize: 11,
+                                                fontWeight: FontWeight.w600,
+                                                color: AppTheme.primary,
+                                              ),
+                                            ),
+                                            if (horaires.isEmpty)
+                                              Text(
+                                                'Horaires non définis',
+                                                style: GoogleFonts.poppins(
+                                                  fontSize: 10,
+                                                  color: Colors.black45,
+                                                ),
+                                              )
+                                            else
+                                              ...horaires.map(
+                                                (h) => Text(
+                                                  '${h.jour} : ${h.heureDebut} - ${h.heureFin}',
+                                                  style: GoogleFonts.poppins(
+                                                    fontSize: 10,
+                                                    color: Colors.black54,
+                                                  ),
+                                                ),
+                        ),
+                      ],
+                    ),
                                       );
                                     }),
                                   ],
@@ -1000,9 +1678,9 @@ class _AdminFormateursState extends State<AdminFormateurs> with TickerProviderSt
                             );
                           }),
                         ],
-                      );
-                    },
-                  ),
+                        );
+                      },
+                    ),
                 ],
               ),
             ),
@@ -1018,253 +1696,324 @@ class _AdminFormateursState extends State<AdminFormateurs> with TickerProviderSt
     );
   }
 
-  
-
-  Future<void> _updateModuleDoneHours(String userId, String formationId, String moduleTitle, int delta) async {
-    await _db.updateModuleDoneHours(userId, formationId, moduleTitle, delta);
-    if (!mounted) return;
-    setState(() {});
-  }
-
-  Future<void> _scheduleDialog(String userId, Map<String, dynamic> data) async {
-    final userAssigned = <Map<String, dynamic>>[];
-
-    if (userAssigned.isEmpty) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Le formateur n\'a aucune formation assignée')),
-      );
-      return;
-    }
-
-    Map<String, dynamic>? selectedFormation;
-    final daysControllers = <int, Map<String, TextEditingController>>{};
-    final daysMap = <int, String>{0: 'Lundi', 1: 'Mardi', 2: 'Mercredi', 3: 'Jeudi', 4: 'Vendredi', 5: 'Samedi', 6: 'Dimanche'};
-    final selectedDays = <int>{};
-
-    await showDialog(
-      context: context,
-      builder: (context) {
-        return StatefulBuilder(builder: (context, setState) {
-          return AlertDialog(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-            title: Text(
-              'Attribuer un emploi du temps',
-              style: GoogleFonts.poppins(
-                fontSize: 18,
-                fontWeight: FontWeight.w700,
-                color: Colors.black87,
-              ),
-            ),
-            content: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Container(
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(12),
-                      boxShadow: [
-                        BoxShadow(
-                          color: AppTheme.primary.withValues(alpha: 0.08),
-                          blurRadius: 12,
-                          offset: Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    child: Builder(
-                      builder: (context) {
-                        final uniqueFormations = <String, Map<String, dynamic>>{};
-                        for (final f in userAssigned) {
-                          final title = (f['title'] ?? f['titre'] ?? 'Formation').toString();
-                          if (title.isNotEmpty) {
-                            uniqueFormations[title] = f;
-                          }
-                        }
-
-                        final items = uniqueFormations.entries
-                            .map((e) => DropdownMenuItem<String>(value: e.key, child: Text(e.key)))
-                            .toList();
-
-                        final selectedTitle = selectedFormation != null
-                            ? (selectedFormation!['title'] ?? selectedFormation!['titre'] ?? '').toString()
-                            : null;
-                        final validValue = items.any((i) => i.value == selectedTitle) ? selectedTitle : null;
-
-                        return DropdownButtonFormField<String>(
-                          initialValue: validValue,
-                          items: items,
-                          onChanged: (title) {
-                            setState(() {
-                              selectedFormation = title != null ? uniqueFormations[title] : null;
-                              daysControllers.clear();
-                              selectedDays.clear();
-                            });
-                          },
-                          decoration: InputDecoration(
-                            labelText: 'Sélectionner une formation',
-                            prefixIcon: Icon(Icons.school_rounded, color: AppTheme.primary),
-                            filled: true,
-                            fillColor: Colors.white,
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              borderSide: BorderSide.none,
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                  SizedBox(height: 20),
-                  if (selectedFormation != null)
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+  Widget _buildInfoChip(IconData icon, String label) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade100,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
                       children: [
+          Icon(icon, size: 14, color: Colors.black54),
+          const SizedBox(width: 6),
                         Text(
-                          'Ajouter les jours et horaires (max 7 jours)',
+            label,
                           style: GoogleFonts.poppins(
-                            fontSize: 14,
+              fontSize: 11,
                             fontWeight: FontWeight.w600,
                             color: Colors.black87,
                           ),
                         ),
-                        SizedBox(height: 12),
-                        ...daysMap.entries.map((entry) {
-                          final dayIndex = entry.key;
-                          final dayName = entry.value;
-                          final isSelected = selectedDays.contains(dayIndex);
+        ],
+      ),
+    );
+  }
 
-                          return Padding(
-                            padding: EdgeInsets.only(bottom: 12),
-                            child: Container(
+  Future<void> _scheduleDialog(String userId, Map<String, dynamic> data) async {
+    final formateur = _db.getUserById(userId);
+    if (formateur == null) return;
+
+    await showDialog(
+      context: context,
+      builder: (dialogContext) {
+        final formations = _db.getFormationsForFormateur(userId);
+        return AlertDialog(
+          title: Text(
+            'Emploi du temps — ${data['prenom'] ?? ''} ${data['nom'] ?? ''}',
+            style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w700),
+          ),
+          content: SizedBox(
+            width: 560,
+            child: formations.isEmpty
+                ? Text(
+                    'Aucune formation ou module assigné pour le moment.',
+                    style: GoogleFonts.poppins(fontSize: 13, color: Colors.black54),
+                  )
+                : SingleChildScrollView(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: formations.map((formation) {
+                        final modules = _db.getModulesForFormateur(formation, userId);
+                        final horaires = formation.horaires.where((h) {
+                          return h.module?.isEmpty != false ||
+                              modules.contains(h.module);
+                        }).toList();
+
+                        return Container(
+                          margin: const EdgeInsets.only(bottom: 12),
+                          padding: const EdgeInsets.all(12),
                               decoration: BoxDecoration(
+                            color: AppTheme.primary.withValues(alpha: 0.05),
                                 borderRadius: BorderRadius.circular(10),
-                                color: isSelected ? AppTheme.primary.withValues(alpha: 0.05) : Colors.white,
                                 border: Border.all(
-                                  color: isSelected ? AppTheme.primary : AppTheme.primary.withValues(alpha: 0.2),
+                              color: AppTheme.primary.withValues(alpha: 0.2),
                                 ),
                               ),
-                              padding: EdgeInsets.all(12),
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Row(
-                                    children: [
-                                      Checkbox(
-                                        value: isSelected,
-                                        onChanged: (val) {
-                                          setState(() {
-                                            if (val == true && selectedDays.length < 7) {
-                                              selectedDays.add(dayIndex);
-                                              daysControllers[dayIndex] = {
-                                                'debut': TextEditingController(text: '09:00'),
-                                                'fin': TextEditingController(text: '12:00'),
-                                              };
-                                            } else if (val == false) {
-                                              selectedDays.remove(dayIndex);
-                                              daysControllers.remove(dayIndex);
-                                            }
-                                          });
-                                        },
-                                      ),
                                       Text(
-                                        dayName,
+                                formation.titre,
                                         style: GoogleFonts.poppins(
+                                  fontWeight: FontWeight.w700,
                                           fontSize: 13,
-                                          fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              const SizedBox(height: 6),
+                              Text(
+                                'Modules : ${modules.join(', ')}',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 11,
+                                  color: AppTheme.primary,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              if (horaires.isEmpty)
+                                Text(
+                                  'Aucun horaire planifié',
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 11,
+                                    color: Colors.black45,
+                                  ),
+                                )
+                              else
+                                ...horaires.map(
+                                  (h) => Padding(
+                                    padding: const EdgeInsets.only(bottom: 4),
+                                    child: Text(
+                                      '${h.jour} • ${h.heureDebut} - ${h.heureFin}'
+                                      '${h.module?.isNotEmpty == true ? ' (${h.module})' : ''}',
+                                      style: GoogleFonts.poppins(
+                                        fontSize: 11,
                                           color: Colors.black87,
+                                      ),
+                                    ),
                                         ),
                                       ),
                                     ],
                                   ),
-                                  if (isSelected) ...[
-                                    SizedBox(height: 10),
-                                    Row(
-                                      children: [
-                                        Expanded(
-                                          child: TextField(
-                                            controller: daysControllers[dayIndex]?['debut'],
-                                            style: GoogleFonts.poppins(fontSize: 12),
-                                            decoration: InputDecoration(
-                                              hintText: 'Début (09:00)',
-                                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                                              contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-                                            ),
-                                          ),
-                                        ),
-                                        SizedBox(width: 8),
-                                        Expanded(
-                                          child: TextField(
-                                            controller: daysControllers[dayIndex]?['fin'],
-                                            style: GoogleFonts.poppins(fontSize: 12),
-                                            decoration: InputDecoration(
-                                              hintText: 'Fin (12:00)',
-                                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                                              contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ],
-                                ],
-                              ),
-                            ),
-                          );
-                        }),
-                      ],
+                        );
+                      }).toList(),
                     ),
+                  ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Fermer'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showEditFormateurDialog(User user) {
+    final prenomController = TextEditingController(text: user.prenom);
+    final nomController = TextEditingController(text: user.nom);
+    final phoneController = TextEditingController(text: user.phone);
+    final specialiteController = TextEditingController(text: user.specialite ?? '');
+    String selectedSexe = user.sexe;
+    String? uploadedPhotoUrl = user.photoUrl;
+    bool isUploadingPhoto = false;
+
+    showDialog(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: Text(
+            'Modifier le formateur',
+            style: GoogleFonts.poppins(fontWeight: FontWeight.w700),
+          ),
+          content: SizedBox(
+            width: 480,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                                      children: [
+                  TextField(
+                    controller: prenomController,
+                    decoration: const InputDecoration(
+                      labelText: 'Prénom *',
+                      prefixIcon: Icon(Icons.person_rounded),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: nomController,
+                    decoration: const InputDecoration(
+                      labelText: 'Nom *',
+                      prefixIcon: Icon(Icons.person_rounded),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: phoneController,
+                    decoration: const InputDecoration(
+                      labelText: 'Téléphone',
+                      prefixIcon: Icon(Icons.phone_rounded),
+                    ),
+                    keyboardType: TextInputType.phone,
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: specialiteController,
+                    decoration: const InputDecoration(
+                      labelText: 'Spécialité',
+                      prefixIcon: Icon(Icons.school_rounded),
+                      helperText: 'Ex: Web Development, Flutter, Réseaux, Design Graphique, etc.',
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  DropdownButtonFormField<String>(
+                    initialValue: selectedSexe,
+                    decoration: const InputDecoration(
+                      labelText: 'Sexe',
+                      prefixIcon: Icon(Icons.wc_rounded),
+                    ),
+                    items: const [
+                      DropdownMenuItem(value: 'Homme', child: Text('Homme')),
+                      DropdownMenuItem(value: 'Femme', child: Text('Femme')),
+                    ],
+                    onChanged: (value) {
+                      if (value != null) {
+                        setDialogState(() => selectedSexe = value);
+                      }
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      CircleAvatar(
+                        radius: 24,
+                        backgroundColor: AppTheme.primary.withValues(alpha: 0.1),
+                        backgroundImage: uploadedPhotoUrl != null
+                            ? NetworkImage(uploadedPhotoUrl!)
+                            : null,
+                        child: uploadedPhotoUrl == null
+                            ? Icon(Icons.person_rounded, color: AppTheme.primary)
+                            : null,
+                      ),
+                      const SizedBox(width: 12),
+                      OutlinedButton.icon(
+                        onPressed: isUploadingPhoto
+                            ? null
+                            : () async {
+                                setDialogState(() => isUploadingPhoto = true);
+                                try {
+                                  final url = await ImageKitService()
+                                      .pickAndUploadImage(folder: 'formateurs');
+                                  if (!context.mounted) return;
+                                  setDialogState(() {
+                                    uploadedPhotoUrl = url;
+                                    isUploadingPhoto = false;
+                                  });
+                                } catch (e) {
+                                  if (!context.mounted) return;
+                                  setDialogState(() => isUploadingPhoto = false);
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(content: Text('Erreur photo : $e')),
+                                  );
+                                }
+                              },
+                        icon: const Icon(Icons.photo_camera_rounded, size: 18),
+                        label: const Text('Photo'),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    user.email,
+                    style: GoogleFonts.poppins(fontSize: 12, color: Colors.black54),
+                  ),
                 ],
+              ),
               ),
             ),
             actions: [
               TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: Text('Annuler'),
-              ),
-              Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [AppTheme.primary, AppTheme.primaryDark],
-                  ),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Material(
-                  color: Colors.transparent,
-                  child: InkWell(
-                    onTap: () async {
-                      if (selectedFormation == null || selectedDays.isEmpty) return;
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Annuler'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                final prenom = prenomController.text.trim();
+                final nom = nomController.text.trim();
+                if (prenom.isEmpty || nom.isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Le prénom et le nom sont obligatoires.')),
+                  );
+                  return;
+                }
 
-                      // Schedule stored locally
-
-                      if (!mounted) return;
-                      Navigator.pop(context);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text('Emploi du temps créé avec succès'),
-                          backgroundColor: AppTheme.primary,
-                        ),
-                      );
-                    },
-                    borderRadius: BorderRadius.circular(8),
-                    child: Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                      child: Text(
-                        'Créer',
-                        style: GoogleFonts.poppins(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w600,
-                          fontSize: 14,
-                        ),
-                      ),
+                try {
+                  await AuthProvider().updateUser(
+                    User(
+                      id: user.id,
+                      email: user.email,
+                      nom: nom,
+                      prenom: prenom,
+                      phone: phoneController.text.trim(),
+                      specialite: specialiteController.text.trim().isEmpty
+                          ? null
+                          : specialiteController.text.trim(),
+                      matricule: user.matricule,
+                      role: user.role,
+                      password: user.password,
+                      photoUrl: uploadedPhotoUrl,
+                      assignedFormations: user.assignedFormations,
+                      sexe: selectedSexe,
+                      estActif: user.estActif,
+                      dateCreation: user.dateCreation,
+                      dateModification: DateTime.now(),
                     ),
-                  ),
-                ),
-              ),
-            ],
-          );
-        });
-      },
+                  );
+                  if (!context.mounted) return;
+                  Navigator.pop(dialogContext);
+                  if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Formateur modifié avec succès'),
+                        backgroundColor: AppTheme.success,
+                      ),
+                    );
+                    setState(() {});
+                  }
+                } catch (e) {
+                  if (!context.mounted) return;
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Erreur : $e')),
+                  );
+                }
+              },
+              child: const Text('Enregistrer'),
+            ),
+          ],
+        ),
+      ),
     );
+  }
+
+  Future<void> _updateModuleDoneHours(
+    String userId,
+    String formationId,
+    String moduleTitle,
+    int delta,
+  ) async {
+    await _db.updateModuleDoneHours(userId, formationId, moduleTitle, delta);
+    if (!mounted) return;
+    setState(() {});
   }
 }

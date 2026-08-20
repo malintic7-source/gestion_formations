@@ -14,6 +14,7 @@ class InvoiceService {
     required double montantPaye,
     required double montantRestant,
     required String statut,
+    List<Map<String, dynamic>> paymentHistory = const [],
   }) async {
     final pdf = pw.Document();
 
@@ -52,7 +53,7 @@ class InvoiceService {
                       ),
                       pw.SizedBox(height: 4),
                       pw.Text(
-                        'Gestion Formations',
+                        'Malintic',
                         style: pw.TextStyle(
                           fontSize: 12,
                           color: PdfColor.fromInt(0xFF6B7280),
@@ -397,6 +398,53 @@ class InvoiceService {
                 ],
               ),
               pw.SizedBox(height: 20),
+              if (paymentHistory.isNotEmpty) ...[
+                pw.Text(
+                  'HISTORIQUE DES VERSEMENTS',
+                  style: pw.TextStyle(
+                    fontSize: 14,
+                    fontWeight: pw.FontWeight.bold,
+                    color: PdfColor.fromInt(0xFF1F2937),
+                  ),
+                ),
+                pw.SizedBox(height: 8),
+                pw.Table(
+                  border: pw.TableBorder.all(color: PdfColor.fromInt(0xFFE5E7EB)),
+                  columnWidths: {
+                    0: const pw.FlexColumnWidth(1),
+                    1: const pw.FlexColumnWidth(1.5),
+                    2: const pw.FlexColumnWidth(1.5),
+                    3: const pw.FlexColumnWidth(2),
+                  },
+                  children: [
+                    pw.TableRow(
+                      decoration: pw.BoxDecoration(color: PdfColor.fromInt(AppTheme.primary.toARGB32())),
+                      children: ['Tranche', 'Montant', 'Remise', 'État'].map(
+                        (label) => pw.Padding(
+                          padding: pw.EdgeInsets.all(6),
+                          child: pw.Text(label, style: pw.TextStyle(fontSize: 9, color: PdfColors.white, fontWeight: pw.FontWeight.bold)),
+                        ),
+                      ).toList(),
+                    ),
+                    ...paymentHistory.map(
+                      (payment) => pw.TableRow(
+                        children: [
+                          '${payment['trancheNumero'] ?? 1}/${payment['nombreTranches'] ?? 1}',
+                          '${payment['montant'] ?? 0} FCFA',
+                          '${payment['remise'] ?? 0} FCFA',
+                          '${payment['statusLabel'] ?? 'En attente'}',
+                        ].map(
+                          (value) => pw.Padding(
+                            padding: pw.EdgeInsets.all(6),
+                            child: pw.Text(value, style: pw.TextStyle(fontSize: 9)),
+                          ),
+                        ).toList(),
+                      ),
+                    ),
+                  ],
+                ),
+                pw.SizedBox(height: 20),
+              ],
               pw.Spacer(),
 
               // Pied de page

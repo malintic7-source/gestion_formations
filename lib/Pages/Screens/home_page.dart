@@ -13,6 +13,9 @@ class HomePage extends StatefulWidget {
 class HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
+    final width = MediaQuery.of(context).size.width;
+    final maxWidth = width > 1200 ? 1100.0 : width * 0.95;
+
     return Scaffold(
       backgroundColor: const Color(0xFFEFEFEF),
       extendBodyBehindAppBar: true,
@@ -111,17 +114,53 @@ class HomePageState extends State<HomePage> {
             ),
           ),
 
-          //CONTENU PRINCIPALE DE LA PAGE
+          //CONTENU PRINCIPAL DE LA PAGE
           Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                SizedBox(),
-                //Contenu
-                ///////////////////////////////////....
-                //Footer de la page de bienvenue
-                footer(),
-              ],
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 16),
+              child: ConstrainedBox(
+                constraints: BoxConstraints(maxWidth: maxWidth),
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: AppTheme.surface,
+                    borderRadius: BorderRadius.circular(24),
+                    boxShadow: AppTheme.cardShadow,
+                  ),
+                  padding: const EdgeInsets.all(28),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Bienvenue sur Malintic',
+                        style: GoogleFonts.poppins(
+                          fontSize: 32,
+                          fontWeight: FontWeight.w800,
+                          color: AppTheme.textPrimary,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        'Accédez rapidement à vos tableaux de bord, formations et notifications depuis un espace clair et professionnel.',
+                        style: GoogleFonts.poppins(
+                          fontSize: 16,
+                          color: AppTheme.textSecondary,
+                          height: 1.6,
+                        ),
+                      ),
+                      const SizedBox(height: 30),
+                      Row(
+                        children: [
+                          _buildStatCard('Formations', '120'),
+                          const SizedBox(width: 16),
+                          _buildStatCard('Utilisateurs', '86'),
+                        ],
+                      ),
+                      const SizedBox(height: 32),
+                      footer(),
+                    ],
+                  ),
+                ),
+              ),
             ),
           ),
         ],
@@ -133,6 +172,47 @@ class HomePageState extends State<HomePage> {
         focusColor: Colors.white,
         backgroundColor: AppTheme.primary,
         child: Icon(Icons.support_agent, color: Colors.white),
+      ),
+    );
+  }
+
+  Widget _buildStatCard(String label, String value) {
+    return Expanded(
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(18),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.05),
+              blurRadius: 16,
+              offset: const Offset(0, 8),
+            ),
+          ],
+        ),
+        padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 18),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              label,
+              style: GoogleFonts.poppins(
+                fontSize: 14,
+                color: AppTheme.textSecondary,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              value,
+              style: GoogleFonts.poppins(
+                fontSize: 32,
+                color: AppTheme.textPrimary,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

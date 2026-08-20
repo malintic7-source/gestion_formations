@@ -3,15 +3,19 @@ import 'package:gestion_formations/Models/user.dart';
 import 'package:gestion_formations/Pages/Admin/dashboard.dart';
 import 'package:gestion_formations/Pages/Admin/formations.dart';
 import 'package:gestion_formations/Pages/Admin/formateurs.dart';
-import 'package:gestion_formations/Pages/Admin/etudiants.dart';
 import 'package:gestion_formations/Pages/Admin/inscriptions.dart';
 import 'package:gestion_formations/Pages/Admin/paiements.dart';
+import 'package:gestion_formations/Pages/Admin/apprenants.dart';
 import 'package:gestion_formations/Pages/Admin/users.dart';
+import 'package:gestion_formations/Pages/Admin/planning.dart';
+import 'package:gestion_formations/Pages/Admin/attestations_cartes.dart';
+import 'package:gestion_formations/Pages/Admin/audit_logs.dart';
 import 'package:gestion_formations/Pages/Common/profile.dart';
 import 'package:gestion_formations/Pages/Formateur/dashboard.dart';
-import 'package:gestion_formations/Pages/Formateur/etudiants.dart';
+import 'package:gestion_formations/Pages/Formateur/apprenants.dart';
 import 'package:gestion_formations/Pages/Formateur/schedule.dart';
 import 'package:gestion_formations/Pages/Screens/notifications.dart';
+import 'package:gestion_formations/Pages/Screens/payments.dart';
 import 'package:gestion_formations/Pages/Student/dashboard.dart';
 import 'package:gestion_formations/Pages/Student/formations.dart';
 import 'package:gestion_formations/Pages/Student/schedule.dart';
@@ -55,100 +59,270 @@ class _HomeScreenState extends State<HomeScreen> {
     switch (widget.user.role) {
       case UserRole.admin:
         return [
-          NavigationItem(label: 'Dashboard', icon: Icons.dashboard),
-          NavigationItem(label: 'Utilisateurs', icon: Icons.people),
-          NavigationItem(label: 'Étudiants', icon: Icons.school),
-          NavigationItem(label: 'Formations', icon: Icons.book),
-          NavigationItem(label: 'Formateurs', icon: Icons.person_outline),
-          NavigationItem(label: 'Inscriptions', icon: Icons.assignment),
-          NavigationItem(label: 'Paiements', icon: Icons.payment),
-          NavigationItem(label: 'Notifications', icon: Icons.notifications),
-          NavigationItem(label: 'Profil', icon: Icons.account_circle),
+          NavigationItem(label: 'Dashboard', icon: Icons.dashboard_rounded),
+          NavigationItem(label: 'Formations', icon: Icons.school_rounded),
+          NavigationItem(label: 'Formateurs', icon: Icons.people_alt_rounded),
+          NavigationItem(label: 'Inscriptions', icon: Icons.receipt_long_rounded),
+          NavigationItem(label: 'Stagiaires / Apprenants', icon: Icons.badge_rounded),
+          NavigationItem(label: 'Paiements', icon: Icons.payments_rounded),
+          NavigationItem(label: 'Utilisateurs & Rôles', icon: Icons.manage_accounts_rounded),
+          NavigationItem(label: 'Planning', icon: Icons.calendar_month_rounded),
+          NavigationItem(label: 'Attestations & Diplômes', icon: Icons.workspace_premium_rounded),
+          NavigationItem(label: 'Logs & Audit', icon: Icons.history_edu_rounded),
+          NavigationItem(label: 'Notifications', icon: Icons.notifications_rounded),
+          NavigationItem(label: 'Profil', icon: Icons.account_circle_rounded),
         ];
+
+      case UserRole.dg:
+        return [
+          NavigationItem(label: 'Dashboard Direction', icon: Icons.analytics_rounded),
+          NavigationItem(label: 'Formations', icon: Icons.school_rounded),
+          NavigationItem(label: 'Formateurs', icon: Icons.people_alt_rounded),
+          NavigationItem(label: 'Inscriptions', icon: Icons.receipt_long_rounded),
+          NavigationItem(label: 'Stagiaires / Apprenants', icon: Icons.badge_rounded),
+          NavigationItem(label: 'Paiements & Caisse', icon: Icons.payments_rounded),
+          NavigationItem(label: 'Planning', icon: Icons.calendar_month_rounded),
+          NavigationItem(label: 'Attestations & Diplômes', icon: Icons.workspace_premium_rounded),
+          NavigationItem(label: 'Notifications', icon: Icons.notifications_rounded),
+          NavigationItem(label: 'Profil', icon: Icons.account_circle_rounded),
+        ];
+
+      case UserRole.daf:
+      case UserRole.comptable:
+        return [
+          NavigationItem(label: 'Dashboard Financier', icon: Icons.account_balance_wallet_rounded),
+          NavigationItem(label: 'Inscriptions', icon: Icons.receipt_long_rounded),
+          NavigationItem(label: 'Paiements & Encaissements', icon: Icons.payments_rounded),
+          NavigationItem(label: 'Stagiaires / Apprenants', icon: Icons.badge_rounded),
+          NavigationItem(label: 'Attestations & Soldes', icon: Icons.workspace_premium_rounded),
+          NavigationItem(label: 'Notifications', icon: Icons.notifications_rounded),
+          NavigationItem(label: 'Profil', icon: Icons.account_circle_rounded),
+        ];
+
+      case UserRole.assistant:
+        return [
+          NavigationItem(label: 'Dashboard Accueil', icon: Icons.dashboard_rounded),
+          NavigationItem(label: 'Inscriptions', icon: Icons.receipt_long_rounded),
+          NavigationItem(label: 'Stagiaires / Apprenants', icon: Icons.badge_rounded),
+          NavigationItem(label: 'Formations', icon: Icons.school_rounded),
+          NavigationItem(label: 'Planning', icon: Icons.calendar_month_rounded),
+          NavigationItem(label: 'Notifications', icon: Icons.notifications_rounded),
+          NavigationItem(label: 'Profil', icon: Icons.account_circle_rounded),
+        ];
+
+      case UserRole.it:
+        return [
+          NavigationItem(label: 'Dashboard Système', icon: Icons.terminal_rounded),
+          NavigationItem(label: 'Utilisateurs & Rôles', icon: Icons.manage_accounts_rounded),
+          NavigationItem(label: 'Formations', icon: Icons.school_rounded),
+          NavigationItem(label: 'Logs & Audit', icon: Icons.history_edu_rounded),
+          NavigationItem(label: 'Planning', icon: Icons.calendar_month_rounded),
+          NavigationItem(label: 'Notifications', icon: Icons.notifications_rounded),
+          NavigationItem(label: 'Profil', icon: Icons.account_circle_rounded),
+        ];
+
       case UserRole.formateur:
         return [
-          NavigationItem(label: 'Dashboard', icon: Icons.dashboard),
-          NavigationItem(label: 'Étudiants', icon: Icons.people),
-          NavigationItem(label: 'Emploi du temps', icon: Icons.schedule),
-          NavigationItem(label: 'Notifications', icon: Icons.notifications),
-          NavigationItem(label: 'Profil', icon: Icons.account_circle),
+          NavigationItem(label: 'Dashboard Formateur', icon: Icons.dashboard_rounded),
+          NavigationItem(label: 'Mes Apprenants', icon: Icons.people_alt_rounded),
+          NavigationItem(label: 'Mon Emploi du temps', icon: Icons.calendar_month_rounded),
+          NavigationItem(label: 'Notifications', icon: Icons.notifications_rounded),
+          NavigationItem(label: 'Profil', icon: Icons.account_circle_rounded),
         ];
-      case UserRole.etudiant:
+
+      case UserRole.apprenant:
         return [
-          NavigationItem(label: 'Dashboard', icon: Icons.dashboard),
-          NavigationItem(label: 'Mes formations', icon: Icons.school),
-          NavigationItem(label: 'Emploi du temps', icon: Icons.schedule),
-          NavigationItem(label: 'Notifications', icon: Icons.notifications),
-          NavigationItem(label: 'Profil', icon: Icons.account_circle),
+          NavigationItem(label: 'Mon Espace', icon: Icons.dashboard_rounded),
+          NavigationItem(label: 'Mes Formations', icon: Icons.school_rounded),
+          NavigationItem(label: 'Mon Emploi du temps', icon: Icons.calendar_month_rounded),
+          NavigationItem(label: 'Mes Paiements', icon: Icons.payment_rounded),
+          NavigationItem(label: 'Notifications', icon: Icons.notifications_rounded),
+          NavigationItem(label: 'Profil', icon: Icons.account_circle_rounded),
         ];
     }
   }
 
   String _getPageTitle() {
-    final titles = {
-      UserRole.admin: [
-        'Dashboard',
-        'Gestion des Utilisateurs',
-        'Gestion des Étudiants',
-        'Gestion des Formations',
-        'Gestion des Formateurs',
-        'Gestion des Inscriptions',
-        'Gestion des Paiements',
-        'Notifications',
-        'Mon Profil',
-      ],
-      UserRole.formateur: [
-        'Dashboard',
-        'Mes Étudiants',
-        'Emploi du Temps',
-        'Notifications',
-        'Mon Profil',
-      ],
-      UserRole.etudiant: [
-        'Dashboard',
-        'Mes Formations',
-        'Mon Emploi du Temps',
-        'Notifications',
-        'Mon Profil',
-      ],
-    };
-
-    return titles[widget.user.role]?[_selectedIndex] ?? 'Page';
+    if (_selectedIndex >= 0 && _selectedIndex < navigationItems.length) {
+      return navigationItems[_selectedIndex].label;
+    }
+    return 'M@LI-NTIC';
   }
 
   Widget _buildSelectedPage() {
+    if (_selectedIndex < 0 || _selectedIndex >= navigationItems.length) {
+      return const SizedBox();
+    }
+    final label = navigationItems[_selectedIndex].label;
+
     switch (widget.user.role) {
       case UserRole.admin:
-        return _buildAdminPage();
+        return _buildAdminPageByLabel(label);
+
+      case UserRole.dg:
+        return _buildDgPageByLabel(label);
+
+      case UserRole.daf:
+      case UserRole.comptable:
+        return _buildAccountingPageByLabel(label);
+
+      case UserRole.assistant:
+        return _buildAssistantPageByLabel(label);
+
+      case UserRole.it:
+        return _buildItPageByLabel(label);
+
       case UserRole.formateur:
         return _buildFormateurPage();
-      case UserRole.etudiant:
-        return _buildEtudiantPage();
+
+      case UserRole.apprenant:
+        return _buildApprenantPage();
     }
   }
 
-  Widget _buildAdminPage() {
-    switch (_selectedIndex) {
-      case 0:
-        return AdminDashboard(user: widget.user);
-      case 1:
-        return AdminUsers();
-      case 2:
-        return AdminEtudiants();
-      case 3:
-        return AdminFormations();
-      case 4:
-        return AdminFormateurs();
-      case 5:
-        return AdminInscriptions();
-      case 6:
-        return AdminPaiements();
-      case 7:
+  Widget _buildAdminPageByLabel(String label) {
+    switch (label) {
+      case 'Dashboard':
+        return AdminDashboard(
+          user: widget.user,
+          onNavigateTab: (index) {
+            setState(() => _selectedIndex = index.clamp(0, navigationItems.length - 1));
+          },
+        );
+      case 'Formations':
+        return const AdminFormations();
+      case 'Formateurs':
+        return const AdminFormateurs();
+      case 'Inscriptions':
+        return const AdminInscriptions();
+      case 'Stagiaires / Apprenants':
+        return const AdminApprenants();
+      case 'Paiements':
+        return const AdminPaiements();
+      case 'Utilisateurs & Rôles':
+        return const AdminUsers();
+      case 'Planning':
+        return const AdminPlanning();
+      case 'Attestations & Diplômes':
+        return AdminAttestationsCartes(user: widget.user);
+      case 'Logs & Audit':
+        return const AdminAuditLogs();
+      case 'Notifications':
         return NotificationsPage(user: widget.user);
-      case 8:
+      case 'Profil':
         return ProfilePage(user: widget.user);
       default:
-        return SizedBox();
+        return const SizedBox();
+    }
+  }
+
+  Widget _buildDgPageByLabel(String label) {
+    switch (label) {
+      case 'Dashboard Direction':
+        return AdminDashboard(
+          user: widget.user,
+          onNavigateTab: (index) {
+            setState(() => _selectedIndex = index.clamp(0, navigationItems.length - 1));
+          },
+        );
+      case 'Formations':
+        return const AdminFormations();
+      case 'Formateurs':
+        return const AdminFormateurs();
+      case 'Inscriptions':
+        return const AdminInscriptions();
+      case 'Stagiaires / Apprenants':
+        return const AdminApprenants();
+      case 'Paiements & Caisse':
+        return const AdminPaiements();
+      case 'Planning':
+        return const AdminPlanning();
+      case 'Attestations & Diplômes':
+        return AdminAttestationsCartes(user: widget.user);
+      case 'Notifications':
+        return NotificationsPage(user: widget.user);
+      case 'Profil':
+        return ProfilePage(user: widget.user);
+      default:
+        return const SizedBox();
+    }
+  }
+
+  Widget _buildAccountingPageByLabel(String label) {
+    switch (label) {
+      case 'Dashboard Financier':
+        return AdminDashboard(
+          user: widget.user,
+          onNavigateTab: (index) {
+            setState(() => _selectedIndex = index.clamp(0, navigationItems.length - 1));
+          },
+        );
+      case 'Inscriptions':
+        return const AdminInscriptions();
+      case 'Paiements & Encaissements':
+        return const AdminPaiements();
+      case 'Stagiaires / Apprenants':
+        return const AdminApprenants();
+      case 'Attestations & Soldes':
+        return AdminAttestationsCartes(user: widget.user);
+      case 'Notifications':
+        return NotificationsPage(user: widget.user);
+      case 'Profil':
+        return ProfilePage(user: widget.user);
+      default:
+        return const SizedBox();
+    }
+  }
+
+  Widget _buildAssistantPageByLabel(String label) {
+    switch (label) {
+      case 'Dashboard Accueil':
+        return AdminDashboard(
+          user: widget.user,
+          onNavigateTab: (index) {
+            setState(() => _selectedIndex = index.clamp(0, navigationItems.length - 1));
+          },
+        );
+      case 'Inscriptions':
+        return const AdminInscriptions();
+      case 'Stagiaires / Apprenants':
+        return const AdminApprenants();
+      case 'Formations':
+        return const AdminFormations();
+      case 'Planning':
+        return const AdminPlanning();
+      case 'Notifications':
+        return NotificationsPage(user: widget.user);
+      case 'Profil':
+        return ProfilePage(user: widget.user);
+      default:
+        return const SizedBox();
+    }
+  }
+
+  Widget _buildItPageByLabel(String label) {
+    switch (label) {
+      case 'Dashboard Système':
+        return AdminDashboard(
+          user: widget.user,
+          onNavigateTab: (index) {
+            setState(() => _selectedIndex = index.clamp(0, navigationItems.length - 1));
+          },
+        );
+      case 'Utilisateurs & Rôles':
+        return const AdminUsers();
+      case 'Formations':
+        return const AdminFormations();
+      case 'Logs & Audit':
+        return const AdminAuditLogs();
+      case 'Planning':
+        return const AdminPlanning();
+      case 'Notifications':
+        return NotificationsPage(user: widget.user);
+      case 'Profil':
+        return ProfilePage(user: widget.user);
+      default:
+        return const SizedBox();
     }
   }
 
@@ -157,7 +331,7 @@ class _HomeScreenState extends State<HomeScreen> {
       case 0:
         return FormateurDashboard(user: widget.user);
       case 1:
-        return FormateurEtudiants(user: widget.user);
+        return FormateurApprenants(user: widget.user);
       case 2:
         return FormateurSchedule(user: widget.user);
       case 3:
@@ -165,11 +339,11 @@ class _HomeScreenState extends State<HomeScreen> {
       case 4:
         return ProfilePage(user: widget.user);
       default:
-        return SizedBox();
+        return const SizedBox();
     }
   }
 
-  Widget _buildEtudiantPage() {
+  Widget _buildApprenantPage() {
     switch (_selectedIndex) {
       case 0:
         return StudentDashboard(user: widget.user);
@@ -178,11 +352,13 @@ class _HomeScreenState extends State<HomeScreen> {
       case 2:
         return StudentSchedule(user: widget.user);
       case 3:
-        return NotificationsPage(user: widget.user);
+        return PaymentsPage(user: widget.user);
       case 4:
+        return NotificationsPage(user: widget.user);
+      case 5:
         return ProfilePage(user: widget.user);
       default:
-        return SizedBox();
+        return const SizedBox();
     }
   }
 }
