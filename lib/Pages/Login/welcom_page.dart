@@ -33,11 +33,11 @@ class WelcomPage extends StatelessWidget {
           _buildLogo(160),
           const SizedBox(height: 24),
           Text(
-            'L’univers des technologies — 4 pôles à vos services',
-            style: GoogleFonts.outfit(
-              fontSize: 18,
+            'L’univers des technologies — 4 pôles à votre service',
+            style: GoogleFonts.poppins(
+              fontSize: 19,
               fontWeight: FontWeight.w800,
-              color: const Color(0xFF1E293B),
+              color: AppTheme.textPrimary,
               height: 1.4,
               letterSpacing: -0.2,
             ),
@@ -76,11 +76,11 @@ class WelcomPage extends StatelessWidget {
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 16),
                       child: Text(
-                        'L’univers des technologies — 4 pôles à vos services',
-                        style: GoogleFonts.outfit(
-                          fontSize: 23,
+                        'L’univers des technologies — 4 pôles à votre service',
+                        style: GoogleFonts.poppins(
+                          fontSize: 25,
                           fontWeight: FontWeight.w800,
-                          color: const Color(0xFF1E293B),
+                          color: AppTheme.textPrimary,
                           height: 1.45,
                           letterSpacing: -0.3,
                         ),
@@ -230,8 +230,8 @@ class WelcomPage extends StatelessWidget {
                           children: [
                             Text(
                               service['title'] as String,
-                              style: GoogleFonts.outfit(
-                                fontSize: 18,
+                              style: GoogleFonts.poppins(
+                                fontSize: 19,
                                 fontWeight: FontWeight.w700,
                                 color: AppTheme.textPrimary,
                               ),
@@ -239,7 +239,7 @@ class WelcomPage extends StatelessWidget {
                             const SizedBox(height: 4),
                             Text(
                               service['subtitle'] as String,
-                              style: GoogleFonts.outfit(
+                              style: GoogleFonts.poppins(
                                 fontSize: 13,
                                 color: AppTheme.textSecondary,
                                 fontWeight: FontWeight.w400,
@@ -364,7 +364,7 @@ class WelcomPage extends StatelessWidget {
                           children: [
                             Text(
                               service['title'] as String,
-                              style: GoogleFonts.outfit(
+                              style: GoogleFonts.poppins(
                                 fontSize: 15,
                                 fontWeight: FontWeight.w700,
                                 color: AppTheme.textPrimary,
@@ -373,7 +373,7 @@ class WelcomPage extends StatelessWidget {
                             const SizedBox(height: 2),
                             Text(
                               service['subtitle'] as String,
-                              style: GoogleFonts.outfit(
+                              style: GoogleFonts.poppins(
                                 fontSize: 12,
                                 color: AppTheme.textSecondary,
                               ),
@@ -394,4 +394,6 @@ class WelcomPage extends StatelessWidget {
     );
   }
 }
+
+
 

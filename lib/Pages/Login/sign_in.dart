@@ -114,7 +114,7 @@ class _SignInPageState extends State<SignInPage> {
         const SizedBox(height: 20),
         Text(
           'Bienvenue sur l’espace ${widget.poleName}',
-          style: GoogleFonts.outfit(
+          style: GoogleFonts.poppins(
             fontSize: 20,
             fontWeight: FontWeight.w700,
             color: AppTheme.textPrimary,
@@ -124,7 +124,7 @@ class _SignInPageState extends State<SignInPage> {
         const SizedBox(height: 6),
         Text(
           'Connectez-vous pour accéder à vos outils et services.',
-          style: GoogleFonts.outfit(
+          style: GoogleFonts.poppins(
             fontSize: 13,
             color: AppTheme.textSecondary,
             fontWeight: FontWeight.w400,
@@ -151,7 +151,7 @@ class _SignInPageState extends State<SignInPage> {
               const SizedBox(height: 24),
               Text(
                 'Bienvenue sur l’espace ${widget.poleName}',
-                style: GoogleFonts.outfit(
+                style: GoogleFonts.poppins(
                   fontSize: 24,
                   fontWeight: FontWeight.w700,
                   color: AppTheme.textPrimary,
@@ -161,7 +161,7 @@ class _SignInPageState extends State<SignInPage> {
               const SizedBox(height: 8),
               Text(
                 'Connectez-vous pour accéder à vos ${widget.poleName.toLowerCase()} et outils de gestion.',
-                style: GoogleFonts.outfit(
+                style: GoogleFonts.poppins(
                   fontSize: 14,
                   color: AppTheme.textSecondary,
                   fontWeight: FontWeight.w400,
@@ -208,7 +208,7 @@ class _SignInPageState extends State<SignInPage> {
         const SizedBox(height: 20),
         Text(
           'M@LI-NTIC',
-          style: GoogleFonts.outfit(
+          style: GoogleFonts.poppins(
             fontSize: titleSize,
             fontWeight: FontWeight.w800,
             color: AppTheme.textPrimary,
@@ -238,7 +238,7 @@ class _SignInPageState extends State<SignInPage> {
             Text(
               'Connexion',
               textAlign: TextAlign.center,
-              style: GoogleFonts.outfit(
+              style: GoogleFonts.poppins(
                 fontSize: 26,
                 fontWeight: FontWeight.w800,
                 color: AppTheme.textPrimary,
@@ -249,7 +249,7 @@ class _SignInPageState extends State<SignInPage> {
             Text(
               'Entrez vos identifiants pour accéder à votre compte.',
               textAlign: TextAlign.center,
-              style: GoogleFonts.outfit(
+              style: GoogleFonts.poppins(
                 fontSize: 13,
                 color: AppTheme.textSecondary,
                 fontWeight: FontWeight.w400,
@@ -278,7 +278,7 @@ class _SignInPageState extends State<SignInPage> {
                 ),
                 child: Text(
                   'Mot de passe oublié ?',
-                  style: GoogleFonts.outfit(
+                  style: GoogleFonts.poppins(
                     fontSize: 13,
                     color: AppTheme.primary,
                     fontWeight: FontWeight.w600,
@@ -297,7 +297,7 @@ class _SignInPageState extends State<SignInPage> {
   Widget _buildEmailField() {
     return TextField(
       controller: _emailController,
-      style: GoogleFonts.outfit(
+      style: GoogleFonts.poppins(
         fontSize: 14,
         fontWeight: FontWeight.w500,
         color: AppTheme.textPrimary,
@@ -317,7 +317,7 @@ class _SignInPageState extends State<SignInPage> {
   Widget _buildPasswordField() {
     return TextField(
       controller: _passwordController,
-      style: GoogleFonts.outfit(
+      style: GoogleFonts.poppins(
         fontSize: 14,
         fontWeight: FontWeight.w500,
         color: AppTheme.textPrimary,
@@ -371,7 +371,7 @@ class _SignInPageState extends State<SignInPage> {
                     )
                   : Text(
                       'Se connecter',
-                      style: GoogleFonts.outfit(
+                      style: GoogleFonts.poppins(
                         fontSize: 15,
                         fontWeight: FontWeight.w700,
                         color: Colors.white,
@@ -435,4 +435,5 @@ class _SignInPageState extends State<SignInPage> {
     }
   }
 }
+
 
