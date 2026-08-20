@@ -6,7 +6,8 @@ import 'package:gestion_formations/Pages/home_screen.dart';
 import 'package:gestion_formations/Services/auth_provider.dart';
 
 class SignInPage extends StatefulWidget {
-  const SignInPage({super.key});
+  final String poleName;
+  const SignInPage({super.key, this.poleName = 'Formations'});
 
   @override
   State<SignInPage> createState() => _SignInPageState();
@@ -110,7 +111,27 @@ class _SignInPageState extends State<SignInPage> {
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         _buildLogo(),
-        const SizedBox(height: 32),
+        const SizedBox(height: 20),
+        Text(
+          'Bienvenue sur l’espace ${widget.poleName}',
+          style: GoogleFonts.outfit(
+            fontSize: 20,
+            fontWeight: FontWeight.w700,
+            color: AppTheme.textPrimary,
+          ),
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: 6),
+        Text(
+          'Connectez-vous pour accéder à vos outils et services.',
+          style: GoogleFonts.outfit(
+            fontSize: 13,
+            color: AppTheme.textSecondary,
+            fontWeight: FontWeight.w400,
+          ),
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: 28),
         _buildForm(isMobile: true),
       ],
     );
@@ -129,9 +150,9 @@ class _SignInPageState extends State<SignInPage> {
               _buildLogo(),
               const SizedBox(height: 24),
               Text(
-                'Bienvenue sur M@LI-NTIC',
-                style: GoogleFonts.poppins(
-                  fontSize: 22,
+                'Bienvenue sur l’espace ${widget.poleName}',
+                style: GoogleFonts.outfit(
+                  fontSize: 24,
                   fontWeight: FontWeight.w700,
                   color: AppTheme.textPrimary,
                 ),
@@ -139,8 +160,8 @@ class _SignInPageState extends State<SignInPage> {
               ),
               const SizedBox(height: 8),
               Text(
-                'Connectez-vous pour accéder à vos formations et outils de gestion.',
-                style: GoogleFonts.poppins(
+                'Connectez-vous pour accéder à vos ${widget.poleName.toLowerCase()} et outils de gestion.',
+                style: GoogleFonts.outfit(
                   fontSize: 14,
                   color: AppTheme.textSecondary,
                   fontWeight: FontWeight.w400,
@@ -176,18 +197,18 @@ class _SignInPageState extends State<SignInPage> {
           ),
           child: Center(
             child: Padding(
-                padding: const EdgeInsets.all(12.0),
-                child: Image.asset(
-                  'images/logo.png',
-                  fit: BoxFit.contain,
-                ),
+              padding: const EdgeInsets.all(12.0),
+              child: Image.asset(
+                'images/logo.png',
+                fit: BoxFit.contain,
               ),
+            ),
           ),
         ),
         const SizedBox(height: 20),
         Text(
-          'Malintic',
-          style: GoogleFonts.poppins(
+          'M@LI-NTIC',
+          style: GoogleFonts.outfit(
             fontSize: titleSize,
             fontWeight: FontWeight.w800,
             color: AppTheme.textPrimary,
@@ -216,7 +237,8 @@ class _SignInPageState extends State<SignInPage> {
           children: [
             Text(
               'Connexion',
-              style: GoogleFonts.poppins(
+              textAlign: TextAlign.center,
+              style: GoogleFonts.outfit(
                 fontSize: 26,
                 fontWeight: FontWeight.w800,
                 color: AppTheme.textPrimary,
@@ -226,7 +248,8 @@ class _SignInPageState extends State<SignInPage> {
             const SizedBox(height: 6),
             Text(
               'Entrez vos identifiants pour accéder à votre compte.',
-              style: GoogleFonts.poppins(
+              textAlign: TextAlign.center,
+              style: GoogleFonts.outfit(
                 fontSize: 13,
                 color: AppTheme.textSecondary,
                 fontWeight: FontWeight.w400,
@@ -255,7 +278,7 @@ class _SignInPageState extends State<SignInPage> {
                 ),
                 child: Text(
                   'Mot de passe oublié ?',
-                  style: GoogleFonts.poppins(
+                  style: GoogleFonts.outfit(
                     fontSize: 13,
                     color: AppTheme.primary,
                     fontWeight: FontWeight.w600,
@@ -274,7 +297,7 @@ class _SignInPageState extends State<SignInPage> {
   Widget _buildEmailField() {
     return TextField(
       controller: _emailController,
-      style: GoogleFonts.poppins(
+      style: GoogleFonts.outfit(
         fontSize: 14,
         fontWeight: FontWeight.w500,
         color: AppTheme.textPrimary,
@@ -294,7 +317,7 @@ class _SignInPageState extends State<SignInPage> {
   Widget _buildPasswordField() {
     return TextField(
       controller: _passwordController,
-      style: GoogleFonts.poppins(
+      style: GoogleFonts.outfit(
         fontSize: 14,
         fontWeight: FontWeight.w500,
         color: AppTheme.textPrimary,
@@ -348,11 +371,10 @@ class _SignInPageState extends State<SignInPage> {
                     )
                   : Text(
                       'Se connecter',
-                      style: GoogleFonts.poppins(
+                      style: GoogleFonts.outfit(
                         fontSize: 15,
                         fontWeight: FontWeight.w700,
                         color: Colors.white,
-                        letterSpacing: 0.3,
                       ),
                     ),
             ),
@@ -362,15 +384,15 @@ class _SignInPageState extends State<SignInPage> {
     );
   }
 
-  void _handleLogin() async {
+  Future<void> _handleLogin() async {
     final email = _emailController.text.trim();
     final password = _passwordController.text.trim();
 
     if (email.isEmpty || password.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Veuillez saisir votre email et votre mot de passe.'),
-          backgroundColor: AppTheme.warningDark,
+          content: Text('Veuillez remplir tous les champs'),
+          backgroundColor: AppTheme.error,
         ),
       );
       return;
@@ -378,7 +400,7 @@ class _SignInPageState extends State<SignInPage> {
 
     setState(() => _isLoading = true);
 
-    try {
+        try {
       final user = await AuthProvider().loginWithEmail(email, password);
 
       if (!mounted) return;
@@ -402,12 +424,14 @@ class _SignInPageState extends State<SignInPage> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Erreur de connexion: $e'),
+          content: Text('Erreur: $e'),
           backgroundColor: AppTheme.error,
         ),
       );
     } finally {
-      if (mounted) setState(() => _isLoading = false);
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 }
