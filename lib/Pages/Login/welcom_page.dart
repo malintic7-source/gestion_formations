@@ -23,44 +23,27 @@ class WelcomPage extends StatelessWidget {
     );
   }
 
-  // MOBILE LAYOUT - Clean responsive layout
+  // MOBILE LAYOUT
   Widget _buildMobileLayout(BuildContext context) {
     return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 32),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 36),
       child: Column(
         children: [
-          const SizedBox(height: 12),
-          _buildLogo(140),
-          const SizedBox(height: 20),
+          const SizedBox(height: 16),
+          _buildLogo(160),
+          const SizedBox(height: 24),
           Text(
-            'M@LI-NTIC',
+            'L’univers des technologies — 4 pôles à vos services',
             style: GoogleFonts.poppins(
-              fontSize: 24,
+              fontSize: 16,
               fontWeight: FontWeight.w800,
-              color: AppTheme.textPrimary,
-              letterSpacing: -0.5,
+              color: const Color(0xFF1E293B),
+              height: 1.4,
+              letterSpacing: -0.2,
             ),
             textAlign: TextAlign.center,
           ),
-          const SizedBox(height: 6),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-            decoration: BoxDecoration(
-              color: AppTheme.primary.withValues(alpha: 0.08),
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: AppTheme.primary.withValues(alpha: 0.15)),
-            ),
-            child: Text(
-              'L’univers des technologies — 4 pôles à vos services',
-              style: GoogleFonts.poppins(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: AppTheme.primary,
-              ),
-              textAlign: TextAlign.center,
-            ),
-          ),
-          const SizedBox(height: 32),
+          const SizedBox(height: 36),
           _buildServiceCardsMobile(context),
           const SizedBox(height: 24),
         ],
@@ -68,11 +51,11 @@ class WelcomPage extends StatelessWidget {
     );
   }
 
-  // DESKTOP LAYOUT - Professional modern layout
+  // DESKTOP LAYOUT
   Widget _buildDesktopLayout(BuildContext context) {
     final size = MediaQuery.of(context).size;
-    final horizontalPadding = size.width < 1200 ? 36.0 : 72.0;
-    final verticalPadding = size.width < 1200 ? 40.0 : 56.0;
+    final horizontalPadding = size.width < 1200 ? 40.0 : 80.0;
+    final verticalPadding = size.width < 1200 ? 48.0 : 64.0;
 
     return Center(
       child: SingleChildScrollView(
@@ -88,83 +71,26 @@ class WelcomPage extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.center,
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    _buildLogo(220),
-                    const SizedBox(height: 24),
-                    Text(
-                      'M@LI-NTIC',
-                      style: GoogleFonts.poppins(
-                        fontSize: 30,
-                        fontWeight: FontWeight.w800,
-                        color: AppTheme.textPrimary,
-                        letterSpacing: -0.5,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
-                      decoration: BoxDecoration(
-                        color: AppTheme.primary.withValues(alpha: 0.08),
-                        borderRadius: BorderRadius.circular(24),
-                        border: Border.all(color: AppTheme.primary.withValues(alpha: 0.18)),
-                      ),
+                    _buildLogo(250),
+                    const SizedBox(height: 28),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
                       child: Text(
                         'L’univers des technologies — 4 pôles à vos services',
                         style: GoogleFonts.poppins(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                          color: AppTheme.primary,
+                          fontSize: 20,
+                          fontWeight: FontWeight.w800,
+                          color: const Color(0xFF1E293B),
+                          height: 1.45,
+                          letterSpacing: -0.3,
                         ),
                         textAlign: TextAlign.center,
-                      ),
-                    ),
-                    const SizedBox(height: 28),
-                    Container(
-                      decoration: BoxDecoration(
-                        gradient: AppTheme.heroGradient,
-                        borderRadius: BorderRadius.circular(14),
-                        boxShadow: AppTheme.heroShadow,
-                      ),
-                      child: Material(
-                        color: Colors.transparent,
-                        child: InkWell(
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => const SignInPage(),
-                              ),
-                            );
-                          },
-                          borderRadius: BorderRadius.circular(14),
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 28,
-                              vertical: 16,
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Text(
-                                  'Accéder à mon espace',
-                                  style: GoogleFonts.poppins(
-                                    fontSize: 15,
-                                    fontWeight: FontWeight.w700,
-                                    color: Colors.white,
-                                  ),
-                                ),
-                                const SizedBox(width: 12),
-                                const Icon(Icons.arrow_forward_rounded, color: Colors.white, size: 20),
-                              ],
-                            ),
-                          ),
-                        ),
                       ),
                     ),
                   ],
                 ),
               ),
-              SizedBox(width: size.width < 1200 ? 36 : 60),
+              SizedBox(width: size.width < 1200 ? 40 : 64),
               Expanded(flex: 5, child: _buildServicesListDesktop(context)),
             ],
           ),
@@ -468,4 +394,3 @@ class WelcomPage extends StatelessWidget {
     );
   }
 }
-
